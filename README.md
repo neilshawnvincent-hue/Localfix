@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # LocalFix
 
 Home services, sorted. A responsive home-services demo built with Expo, React and TypeScript, with customer and professional workspaces.
@@ -136,3 +137,7 @@ Typography uses DM Sans and Space Grotesk from Google Fonts, with local fallback
 ## License
 
 See [LICENSE](LICENSE) for the repository's existing MIT license.
+=======
+# localfix
+A cross-platform (React Native/Supabase) hyperlocal gig services app for SIH 2026. LocalFix matches users with local laborers using 5km geofencing, dual identity verification, and a secure OTP-driven escrow payment loop.
+>>>>>>> origin/main
