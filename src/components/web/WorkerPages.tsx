@@ -1,0 +1,21 @@
+import { useAuthStore } from '@/store/authStore';
+import { useWebStore } from '@/store/webStore';
+import { BookingRow } from './CustomerPages';
+import { EmptyState, Heading, NavLink, Notice, money } from './ui';
+
+export function WorkerHomePage() {
+  const auth = useAuthStore();
+  const store = useWebStore();
+  const available = store.bookings.filter((booking) => booking.status === 'requested');
+  const active = store.bookings.filter((booking) => !['requested', 'completed', 'cancelled'].includes(booking.status));
+  const paid = store.bookings.filter((booking) => booking.status === 'completed' && booking.paid);
+  return <><Heading eyebrow="Professional workspace" title={`Good to see you, ${auth.userName.split(' ')[0]}.`} action={<label className="lf-switch"><input type="checkbox" role="switch" checked={store.online} onChange={(event) => store.setOnline(event.target.checked)} />{store.online ? 'Online for jobs' : 'Offline'}</label>}>Your day, your jobs, your next opportunity.</Heading><section className="lf-stats" aria-label="Job summary"><div className="lf-stat"><small>Active jobs</small><strong>{active.length}</strong><p>Accepted and in progress</p></div><div className="lf-stat"><small>Available requests</small><strong>{available.length}</strong><p>In this demo workspace</p></div><div className="lf-stat"><small>Work earnings</small><strong>{money(paid.reduce((total, booking) => total + (booking.quote ?? 0), 0))}</strong><p>Completed and demo paid</p></div></section>{active.length > 0 && <><div className="lf-section-heading"><h2>Your active jobs</h2><NavLink href="/(worker)/(tabs)/jobs" className="lf-text-button">View all</NavLink></div><div className="lf-booking-list">{active.map((booking) => <BookingRow key={booking.id} booking={booking} worker />)}</div></>}<div className="lf-section-heading"><h2>Available jobs</h2><span>{available.length} requests</span></div>{!store.online ? <EmptyState icon="pause-circle-outline" title="You're currently offline">Go online when you are ready to accept a job.</EmptyState> : available.length ? <div className="lf-booking-list">{available.map((booking) => <BookingRow key={booking.id} booking={booking} worker />)}</div> : <EmptyState icon="briefcase-outline" title="No new requests">New customer bookings in this browser will appear here.</EmptyState>}<Notice>This workspace uses the same local bookings as the customer demo. Switch to the customer role to create a booking, then return here to fulfil it.</Notice></>;
+}
+
+export function EarningsPage() {
+  const bookings = useWebStore((state) => state.bookings);
+  const paid = bookings.filter((booking) => booking.status === 'completed' && booking.paid);
+  const pending = bookings.filter((booking) => booking.status === 'completed' && !booking.paid);
+  const total = paid.reduce((sum, booking) => sum + (booking.quote ?? 0), 0);
+  return <><Heading eyebrow="The work adds up" title="Earnings">Completed jobs and their demo payment records.</Heading><section className="lf-stats" aria-label="Earnings summary"><div className="lf-stat"><small>Work earnings</small><strong>{money(total)}</strong><p>Visit fees excluded</p></div><div className="lf-stat"><small>Awaiting payment</small><strong>{money(pending.reduce((sum, booking) => sum + (booking.quote ?? 0), 0))}</strong><p>{pending.length} completed jobs</p></div><div className="lf-stat"><small>Paid jobs</small><strong>{paid.length}</strong><p>No real payouts</p></div></section><div className="lf-section-heading"><h2>Payment history</h2><span>All time</span></div>{paid.length ? <div className="lf-booking-list">{paid.map((booking) => <BookingRow key={booking.id} booking={booking} worker />)}</div> : <EmptyState icon="wallet-outline" title="Your earnings start with a job" href="/(worker)/(tabs)/home" label="View available jobs">Completed jobs appear here after the customer makes a demo payment.</EmptyState>}<Notice>These amounts are simulated work revenue, not bank balances or payouts. Platform fees, taxes and real settlement are not implemented.</Notice></>;
+}

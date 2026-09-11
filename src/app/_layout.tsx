@@ -1,11 +1,11 @@
-import '../global.css';
 import '@/lib/i18n';
+import '../global.css';
 
-import { useEffect } from 'react';
+import { useAuthStore } from '@/store/authStore';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { View } from 'react-native';
-import { useAuthStore } from '@/store/authStore';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function RootLayout() {
       }
     } else if (!isLoggedIn) {
       // Not logged in → go to auth
-      if (!inAuth && segments[0] !== undefined) {
+      if (!inAuth) {
         router.replace('/(auth)/role-select');
       }
     } else if (role === 'worker' && !isVerified) {

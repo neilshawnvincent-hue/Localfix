@@ -1,20 +1,16 @@
-import { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  withSequence,
-  Easing,
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withSequence,
+    withTiming,
 } from 'react-native-reanimated';
-import { useAuthStore } from '@/store/authStore';
 
 export default function SplashScreen() {
-  const router = useRouter();
-  const { isLoggedIn } = useAuthStore();
   const logoScale = useSharedValue(0.3);
   const logoOpacity = useSharedValue(0);
   const taglineOpacity = useSharedValue(0);
@@ -27,13 +23,6 @@ export default function SplashScreen() {
     );
     taglineOpacity.value = withDelay(400, withTiming(1, { duration: 500 }));
 
-    const timeout = setTimeout(() => {
-      if (!isLoggedIn) {
-        router.replace('/(auth)/role-select');
-      }
-    }, 2000);
-
-    return () => clearTimeout(timeout);
   }, []);
 
   const logoAnimStyle = useAnimatedStyle(() => ({
