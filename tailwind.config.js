@@ -1,34 +1,11 @@
-/** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./src/**/*.{js,jsx,ts,tsx}"],
-  presets: [require("nativewind/preset")],
+  content: ['./App.tsx', './src/**/*.{ts,tsx}'],
+  presets: [require('nativewind/preset')],
+  darkMode: 'class',
   theme: {
     extend: {
-      colors: {
-        brand: {
-          50: '#EFF6FF',
-          100: '#DBEAFE',
-          200: '#BFDBFE',
-          300: '#93C5FD',
-          400: '#60A5FA',
-          500: '#3B82F6',
-          600: '#2563EB',
-          700: '#1D4ED8',
-          800: '#1E40AF',
-          900: '#1E3A8A',
-        },
-        surface: {
-          DEFAULT: '#1E293B',
-          light: '#334155',
-          dark: '#0F172A',
-        },
-        accent: {
-          violet: '#7C3AED',
-          green: '#16A34A',
-          amber: '#F59E0B',
-          red: '#DC2626',
-        },
-      },
+      colors: { canvas: '#F7F9F7', ink: '#203C32', muted: '#7A8981', line: '#E4EBE6', primary: '#287454', mint: '#EAF3ED', peach: '#FCF0E6', lilac: '#F1ECF8', sky: '#EAF1FA', rose: '#FCEBEC' },
+      fontFamily: { sans: ['DMSans_400Regular'], medium: ['DMSans_500Medium'], semibold: ['DMSans_600SemiBold'], bold: ['DMSans_700Bold'], display: ['Manrope_700Bold'], displaybold: ['Manrope_800ExtraBold'] },
     },
   },
   plugins: [],

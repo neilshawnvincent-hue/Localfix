@@ -1,6 +1,0 @@
-CREATE TABLE IF NOT EXISTS users (
-  phone TEXT PRIMARY KEY,
-  role TEXT NOT NULL,
-  name TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
