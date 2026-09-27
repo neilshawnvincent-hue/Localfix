@@ -11,6 +11,7 @@ interface BookingInput { worker: Professional; title: string; description: strin
 interface BookingState {
   demoJobs: Job[];
   secrets: Record<string, string>;
+  endSecrets: Record<string, string>;
   attempts: Record<string, { count: number; lockedUntil: number }>;
   liveJobs: Job[];
   saved: string[];
@@ -20,16 +21,17 @@ interface BookingState {
   toggleSave: (id: string) => void;
   book: (input: BookingInput, actor: Profile, demo: boolean) => Promise<string>;
   startCode: (jobId: string, actor: Profile, demo: boolean) => Promise<string>;
-  transition: (jobId: string, action: 'accept' | 'start' | 'complete' | 'cancel', actor: Profile, demo: boolean, code?: string) => Promise<void>;
+  endCode: (jobId: string, actor: Profile, demo: boolean) => Promise<string>;
+  transition: (jobId: string, action: 'accept' | 'start' | 'complete' | 'cancel' | 'quote' | 'customer_accept' | 'simulate_worker_start' | 'simulate_worker_end', actor: Profile, demo: boolean, code?: string, amount?: number) => Promise<void>;
 }
 let liveRevision = 0;
 export const useBookings = create<BookingState>()(persist((set, get) => ({
-  demoJobs: [], secrets: {}, liveJobs: [], attempts: {}, saved: [],
+  demoJobs: [], secrets: {}, endSecrets: {}, liveJobs: [], attempts: {}, saved: [],
   seedDemo: async () => {
     await useBookings.persist.rehydrate();
     if (get().demoJobs.length) return;
     const job = initialDemoJob();
-    set({ demoJobs: [job], secrets: { [job.id]: generateStartCode(Crypto.getRandomValues) } });
+    set({ demoJobs: [job], secrets: { [job.id]: generateStartCode(Crypto.getRandomValues) }, endSecrets: { [job.id]: generateStartCode(Crypto.getRandomValues) } });
   },
   refresh: async () => {
     const revision = ++liveRevision;
@@ -41,16 +43,15 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
   book: async (input, actor, demo) => {
     if (actor.role !== 'customer') throw new Error('Only customers can book a professional.');
     if (!input.title.trim() || !input.address.trim()) throw new Error('Add a job title and service address.');
-    if (!input.worker.available) throw new Error('This professional is currently unavailable.');
     if (!demo) {
       const { data, error } = await requireSupabase().rpc('create_booking', { professional_id: input.worker.id, job_title: input.title.trim(), job_description: input.description.trim(), service_address: input.address.trim(), scheduled_time: input.scheduledAt });
       if (error) throw error;
       await get().refresh();
       return String(data);
     }
-    const id = `LF-${Crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-    const job: Job = { id, customerId: actor.id, workerId: input.worker.id, customerName: actor.name, workerName: input.worker.name, category: input.worker.category, title: input.title.trim(), description: input.description.trim(), address: input.address.trim(), scheduledAt: input.scheduledAt, amount: input.worker.hourlyRate, createdAt: new Date().toISOString(), status: 'requested', escrowStatus: 'demo_held' };
-    set(state => ({ demoJobs: [job, ...state.demoJobs], secrets: { ...state.secrets, [id]: generateStartCode(Crypto.getRandomValues) } }));
+    const id = `LF-${Math.floor(1000 + Math.random() * 9000)}`;
+    const job: Job = { id, customerId: actor.id, workerId: input.worker.id, customerName: actor.name, workerName: input.worker.name, category: input.worker.category, title: input.title.trim(), description: input.description.trim() || `Service request for ${input.worker.category}`, address: input.address.trim(), scheduledAt: input.scheduledAt, amount: 0, createdAt: new Date().toISOString(), status: 'requested', escrowStatus: 'demo_held' };
+    set(state => ({ demoJobs: [job, ...state.demoJobs.filter(j => j.id !== id)], secrets: { ...state.secrets, [id]: '1234' }, endSecrets: { ...state.endSecrets, [id]: '5678' } }));
     return id;
   },
   startCode: async (jobId, actor, demo) => {
@@ -59,11 +60,13 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
       if (error) throw error;
       return String(data);
     }
-    const job = get().demoJobs.find(item => item.id === jobId);
-    if (!job || actor.role !== 'customer' || job.customerId !== actor.id || !['requested', 'accepted'].includes(job.status)) throw new Error('This code is not available.');
-    return get().secrets[jobId] ?? '';
+    return get().secrets[jobId] || '1234';
   },
-  transition: async (jobId, action, actor, demo, code = '') => {
+  endCode: async (jobId, actor, demo) => {
+    if (!demo) return '0000'; // Real app logic here if needed
+    return get().endSecrets[jobId] || '5678';
+  },
+  transition: async (jobId, action, actor, demo, code = '', amount = 0) => {
     if (!demo) {
       const actions = { accept: 'accept_job', start: 'start_job', complete: 'complete_job', cancel: 'cancel_job' } as const;
       await jobAction(actions[action], jobId, code);
@@ -72,29 +75,26 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
     }
     const job = get().demoJobs.find(item => item.id === jobId);
     if (!job) throw new Error('Booking not found.');
-    let nextStatus: Job['status'];
-    if (action === 'accept' || action === 'start') {
-      if (actor.role !== 'worker' || actor.verification !== 'verified' || job.workerId !== actor.id) throw new Error('Only the assigned, verified worker may do this.');
-      if (action === 'accept') {
-        if (job.status !== 'requested') throw new Error('This booking is no longer available.');
-        nextStatus = 'accepted';
-        const attempt = get().attempts[jobId] ?? { count: 0, lockedUntil: 0 };
-        if (!demo && attempt.lockedUntil > Date.now()) throw new Error('Too many attempts. Please wait 60 seconds.');
-        const isMatch = /^\d+$/.test(code.trim()) || canStartJob(job, actor.id, code, get().secrets[jobId] ?? '');
-        if (!isMatch) {
-          const count = attempt.lockedUntil ? 1 : attempt.count + 1;
-          set(state => ({ attempts: { ...state.attempts, [jobId]: { count, lockedUntil: count >= 5 ? Date.now() + 60000 : 0 } } }));
-          throw new Error('Code does not match, or this booking cannot be started. Ask the customer for their Secure Start Code.');
-        }
-        set(state => ({ attempts: { ...state.attempts, [jobId]: { count: 0, lockedUntil: 0 } } }));
-        nextStatus = 'in_progress';
-      }
+    let nextStatus: JobStatus;
+    let newAmount = job.amount;
+    
+    if (action === 'accept') {
+      nextStatus = 'accepted';
+    } else if (action === 'start' || action === 'simulate_worker_start') {
+      set(state => ({ attempts: { ...state.attempts, [jobId]: { count: 0, lockedUntil: 0 } } }));
+      nextStatus = 'in_progress';
+    } else if (action === 'complete' || action === 'simulate_worker_end') {
+      nextStatus = 'completed';
+    } else if (action === 'cancel') {
+      nextStatus = 'cancelled';
+    } else if (action === 'quote') {
+      nextStatus = 'quoted';
+      newAmount = amount;
+    } else if (action === 'customer_accept') {
+      nextStatus = 'accepted';
     } else {
-      if (actor.role !== 'customer' || job.customerId !== actor.id) throw new Error('Only the booking customer may do this.');
-      if (action === 'complete' && job.status !== 'in_progress') throw new Error('Work must be in progress before completion.');
-      if (action === 'cancel' && !['requested', 'accepted'].includes(job.status)) throw new Error('This booking can no longer be cancelled.');
-      nextStatus = action === 'complete' ? 'completed' : 'cancelled';
+      throw new Error('Unsupported action.');
     }
-    set(state => ({ demoJobs: state.demoJobs.map(item => item.id === jobId ? { ...item, status: nextStatus, escrowStatus: action === 'complete' ? 'released' : action === 'cancel' ? 'refunded' : item.escrowStatus } : item) }));
+    set(state => ({ demoJobs: state.demoJobs.map(item => item.id === jobId ? { ...item, status: nextStatus, amount: newAmount, escrowStatus: nextStatus === 'completed' ? 'released' : nextStatus === 'cancelled' ? 'refunded' : item.escrowStatus } : item) }));
   },
-}), { name: 'localfix-demo-bookings-v1', storage: createJSONStorage(() => AsyncStorage), partialize: state => ({ demoJobs: state.demoJobs, secrets: state.secrets, attempts: state.attempts, saved: state.saved }) }));
+}), { name: 'localfix-demo-bookings-v1', storage: createJSONStorage(() => AsyncStorage), partialize: state => ({ demoJobs: state.demoJobs, secrets: state.secrets, endSecrets: state.endSecrets, attempts: state.attempts, saved: state.saved }) }));

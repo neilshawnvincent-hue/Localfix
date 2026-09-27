@@ -11,25 +11,24 @@ import { errorMessage, requireSupabase } from '../lib/supabase';
 import { useAuth } from '../stores/auth';
 import { useBookings } from '../stores/bookings';
 
-const categories: { name: Category; icon: LucideIcon; color: string; ink: string }[] = [
-  { name: 'Plumbing', icon: Droplets, color: 'bg-sky', ink: '#6487B4' }, { name: 'Electrical', icon: Zap, color: 'bg-peach', ink: '#BA9368' }, { name: 'Cleaning', icon: Sparkles, color: 'bg-lilac', ink: '#A08BBE' }, { name: 'Carpentry', icon: Hammer, color: 'bg-mint', ink: '#679783' }, { name: 'Painting', icon: Paintbrush, color: 'bg-rose', ink: '#B87980' }, { name: 'Appliances', icon: Wind, color: 'bg-sky', ink: '#6487B4' },
+const problemServices = [
+  { name: 'Plumbing' as Category, title: 'Plumbing & Water Issues', tagline: 'Tap leaks, pipe damage, toilet flush, blocked drains', rate: 350, icon: Droplets, color: 'bg-sky', ink: '#6487B4', commonIssues: ['Kitchen tap dripping constantly', 'Water pipe leakage under sink', 'Blocked bathroom drain', 'Flush tank not working'] },
+  { name: 'Electrical' as Category, title: 'Electrical Problems', tagline: 'Switches, wiring faults, tripped MCB, ceiling fans', rate: 400, icon: Zap, color: 'bg-peach', ink: '#BA9368', commonIssues: ['Switchboard sparking / burning smell', 'Ceiling fan stopped running', 'Main MCB tripping repeatedly', 'Power socket not working'] },
+  { name: 'Cleaning' as Category, title: 'Deep Home Cleaning', tagline: 'Bathroom scrubbing, kitchen grease, floor sanitizing', rate: 300, icon: Sparkles, color: 'bg-lilac', ink: '#A08BBE', commonIssues: ['Full bathroom deep clean & descaling', 'Kitchen countertop & chimney degrease', 'Full home floor scrub & mop', 'Window sill & balcony wash'] },
+  { name: 'Carpentry' as Category, title: 'Carpentry & Woodwork', tagline: 'Door locks, loose hinges, furniture fix, shelving', rate: 450, icon: Hammer, color: 'bg-mint', ink: '#679783', commonIssues: ['Main door lock jammed or stuck', 'Loose wardrobe or cupboard hinge', 'Wooden chair / bed frame wobble', 'Curtain rod or wall shelf install'] },
+  { name: 'Painting' as Category, title: 'Wall Painting & Patches', tagline: 'Wall touch-ups, damp patch painting, water damage', rate: 350, icon: Paintbrush, color: 'bg-rose', ink: '#B87980', commonIssues: ['Damp wall patch scraped and repainted', 'Single bedroom wall touch-up', 'Ceiling water mark coverage', 'Door frame enamel paint'] },
+  { name: 'Appliances' as Category, title: 'Appliance Repair', tagline: 'AC not cooling, washing machine vibration, fridge cooling', rate: 400, icon: Wind, color: 'bg-sky', ink: '#6487B4', commonIssues: ['Split AC water leaking or not cooling', 'Washing machine not spinning / draining', 'Refrigerator not freezing properly', 'Geyser not heating water'] },
 ];
 
 export function Dashboard({ onJob }: { onJob: (id: string) => void }) {
   const { profile, mode, logout, loginDemo } = useAuth();
-  const { demoJobs, liveJobs, saved, toggleSave, refresh } = useBookings();
+  const { demoJobs, liveJobs, refresh } = useBookings();
   const { width } = useWindowDimensions();
   const [tab, setTab] = useState<Tab>('home');
   const [category, setCategory] = useState<Category>('All services');
   const [query, setQuery] = useState('');
-  const [onlyAvailable, setOnlyAvailable] = useState(false);
-  const [sort, setSort] = useState<'recommended' | 'price' | 'distance'>('recommended');
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [selected, setSelected] = useState<Professional | null>(null);
-  const [catalog, setCatalog] = useState<Professional[]>([]);
-  const [coordinates, setCoordinates] = useState(DEFAULT_LOCATION);
-  const [locationLabel, setLocationLabel] = useState(mode === 'demo' ? 'Indiranagar, Bengaluru' : 'Set your location');
-  const [locationReady, setLocationReady] = useState(mode === 'demo');
+  const [selectedService, setSelectedService] = useState<typeof problemServices[0] | null>(null);
+  const [locationLabel] = useState('Indiranagar, Bengaluru (5 km radius)');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [available, setAvailable] = useState(true);
@@ -39,73 +38,200 @@ export function Dashboard({ onJob }: { onJob: (id: string) => void }) {
   const activeJobs = jobs.filter(job => !['completed', 'cancelled'].includes(job.status));
   const completedJobs = jobs.filter(job => job.status === 'completed');
   const activeJob = activeJobs[0];
-  useEffect(() => {
-    let mounted = true;
-    if (demo) { setCatalog(professionals); return; }
-    if (worker || !locationReady) return;
+
+  const reload = async () => {
+    if (demo) return;
     setLoading(true);
-    fetchProfessionals(coordinates).then(data => { if (mounted) { setCatalog(data); setError(null); } }).catch(cause => { if (mounted) setError(errorMessage(cause)); }).finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
-  }, [demo, coordinates, worker, locationReady]);
-  const updateLocation = async () => {
-    try {
-      setError(null);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') throw new Error('Location permission was denied. Enable it in device settings to discover nearby professionals.');
-      const result = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setCoordinates({ latitude: result.coords.latitude, longitude: result.coords.longitude }); setLocationReady(true); setLocationLabel('Within 5 km of you');
-    } catch (cause) { setError(errorMessage(cause)); }
+    try { await refresh(); setError(null); } catch (cause) { setError(errorMessage(cause)); } finally { setLoading(false); }
   };
-  const reload = async () => { if (demo) return; setLoading(true); try { await refresh(); if (!worker && locationReady) setCatalog(await fetchProfessionals(coordinates)); setError(null); } catch (cause) { setError(errorMessage(cause)); } finally { setLoading(false); } };
-  const toggleAvailability = async (value: boolean) => {
-    try {
-      if (!demo) { const { error: failure } = await requireSupabase().from('worker_directory').update({ available: value }).eq('id', profile!.id); if (failure) throw failure; }
-      setAvailable(value);
-    } catch (cause) { setError(errorMessage(cause)); }
-  };
-  const filtered = catalog.map(person => ({ ...person, distance: distanceKm(coordinates, person.coordinates) })).filter(person => person.distance <= 5 && (category === 'All services' || person.category === category) && (!onlyAvailable || person.available) && (tab !== 'saved' || saved.includes(person.id)) && `${person.name} ${person.category}`.toLowerCase().includes(query.toLowerCase())).sort((left, right) => sort === 'price' ? left.hourlyRate - right.hourlyRate : sort === 'distance' ? left.distance - right.distance : right.rating - left.rating || right.reviews - left.reviews);
-  const recordSOS = async (job: Job) => { if (!demo) { const { error: failure } = await requireSupabase().from('safety_alerts').insert({ job_id: job.id, user_id: profile!.id }); if (failure) throw failure; } };
+
+  const filteredServices = problemServices.filter(s =>
+    (category === 'All services' || s.name === category) &&
+    (`${s.title} ${s.name} ${s.tagline} ${s.commonIssues.join(' ')}`.toLowerCase().includes(query.toLowerCase()))
+  );
+
   if (!profile) return null;
-  const title = tab === 'home' ? `A good day starts close to home.` : tab === 'explore' ? worker ? 'Good work, right nearby.' : 'Find your helping hand.' : tab === 'bookings' ? worker ? 'Your jobs, all in one place.' : 'A little less on your to-do list.' : tab === 'saved' ? 'Your go-to people.' : tab === 'earnings' ? 'Good work. Fair earnings.' : 'Your corner of LocalFix.';
-  return <Shell tab={tab} onTab={setTab} jobs={jobs} onJob={onJob} onLocation={() => void updateLocation()} location={locationLabel}>
-    <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void reload()} tintColor="#287454" />} contentContainerClassName="px-5 pb-10 pt-7 md:px-9 md:pt-8"><View className="mx-auto w-full max-w-[1280px] gap-7">
-      <Reveal><View className="flex-row flex-wrap items-center justify-between gap-4"><View className="gap-1.5"><Copy className="font-medium text-[13px] text-muted">Hello, {profile.name.split(' ')[0]} <Copy className="text-primary">/</Copy> {worker ? 'Let\'s get to work' : 'Welcome home'}</Copy><Heading className="text-[27px] leading-[36px] md:text-[30px] md:leading-[40px]">{title}</Heading></View>{worker ? <View className="flex-row items-center gap-3"><Badge label={available ? 'Available for work' : 'Offline'} /><Switch accessibilityLabel="Available for work" value={available} onValueChange={value => void toggleAvailability(value)} trackColor={{ false: '#DDE5DF', true: '#287454' }} /></View> : <View className="flex-row items-center gap-2 rounded-full border border-line bg-white px-3 py-2"><View className="h-1.5 w-1.5 rounded-full bg-primary" /><Copy className="font-medium text-[11px]">Your 5 km community</Copy></View>}</View></Reveal>
+  const title = tab === 'home' ? (worker ? 'Your work dashboard.' : 'State your problem. Get instant help.') : tab === 'explore' ? (worker ? 'Your local job feed.' : 'Select a service problem & hire.') : tab === 'bookings' ? (worker ? 'Your jobs, all in one place.' : 'Your service requests & bookings.') : 'Your corner of LocalFix.';
+
+  return <Shell tab={tab} onTab={setTab} jobs={jobs} onJob={onJob} location={locationLabel}>
+    <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void reload()} tintColor="#287454" />} contentContainerClassName="px-4 pb-8 pt-5 md:px-9 md:pb-10 md:pt-8"><View className="mx-auto w-full max-w-[1280px] gap-5 md:gap-7">
+      <Reveal><View className="flex-row flex-wrap items-center justify-between gap-3 md:gap-4"><View className="gap-1 md:gap-1.5"><Copy className="font-medium text-[11px] text-muted md:text-[13px]">Hello, {profile.name.split(' ')[0]} <Copy className="text-primary">/</Copy> {worker ? 'Worker Workspace' : 'Customer Workspace'}</Copy><Heading className="text-[20px] leading-[26px] md:text-[30px] md:leading-[40px]">{title}</Heading></View>{worker ? <View className="flex-row items-center gap-2 md:gap-3"><Badge label={available ? 'Available for jobs' : 'Offline'} /><Switch accessibilityLabel="Available for jobs" value={available} onValueChange={setAvailable} trackColor={{ false: '#DDE5DF', true: '#287454' }} /></View> : <View className="flex-row items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-1.5 md:gap-2 md:px-3 md:py-2"><View className="h-1.5 w-1.5 rounded-full bg-primary" /><Copy className="font-medium text-[10px] md:text-[11px]">5 km Verified Local Matching</Copy></View>}</View></Reveal>
       <Notice message={error} />
-      {tab === 'account' ? <View className="max-w-2xl gap-6"><View className="flex-row items-center gap-5 border-b border-line pb-6"><Avatar name={profile.name} large /><View className="gap-2"><Heading>{profile.name}</Heading><RoleBadge role={profile.role} /></View></View><Field label="Mobile number" value={profile.phone} editable={false} /><View className="flex-row items-center gap-3"><ShieldCheck size={22} color="#287454" /><Copy>Identity: {demo ? 'demo verified' : profile.verification}</Copy></View><Copy className="text-muted">{locationLabel}</Copy>{demo && <><Notice kind="info" message="This is a sample account. Bookings persist on this device and are shared between demo roles. No real payments are processed." /><Button label={`Switch to demo ${worker ? 'customer' : 'worker'}`} variant="secondary" onPress={() => void loginDemo(worker ? 'customer' : 'worker')} /></>}<Button label="Sign out" variant="secondary" onPress={() => void logout()} /></View> : tab === 'earnings' ? <View className="gap-7"><View className="flex-row flex-wrap gap-4"><Metric title="Total earned" value={money(completedJobs.reduce((total, job) => total + job.amount, 0))} icon={Wallet} tint="bg-mint" /><Metric title="Awaiting completion" value={money(activeJobs.reduce((total, job) => total + job.amount, 0))} icon={Clock3} tint="bg-peach" /><Metric title="Jobs completed" value={String(completedJobs.length).padStart(2, '0')} icon={BadgeCheck} tint="bg-lilac" /></View><Heading className="text-lg">Payment history</Heading>{completedJobs.length ? completedJobs.map(job => <Panel key={job.id} className="flex-row items-center gap-4 p-5"><View className="h-11 w-11 items-center justify-center rounded-lg bg-mint"><ArrowDownLeft size={21} color="#287454" /></View><View className="flex-1"><Copy className="font-semibold">{job.title}</Copy><Copy className="text-xs text-muted">{job.customerName} · {demo ? 'Simulated release' : 'Completed'}</Copy></View><Copy className="font-bold text-primary">+{money(job.amount)}</Copy></Panel>) : <EmptyState title="Your first earnings are ahead" description="Completed, customer-confirmed jobs will appear here." />}{demo && <Notice kind="info" message="Demo amounts are simulated. No money has been paid out." />}</View> : tab === 'bookings' ? <View className="gap-4">{jobs.length ? jobs.map(job => <JobRow key={job.id} job={job} worker={worker} onPress={() => onJob(job.id)} />) : <EmptyState title="A fresh start" description="Your bookings will appear here once you find the right professional." action={!worker ? <Button label="Find services" onPress={() => setTab('explore')} /> : undefined} />}</View> : worker ? <>
-        {tab === 'home' && <View className="flex-row flex-wrap gap-4"><Metric title="Active jobs" value={String(activeJobs.length).padStart(2, '0')} icon={CalendarDays} tint="bg-sky" /><Metric title="Your earnings" value={money(completedJobs.reduce((total, job) => total + job.amount, 0))} icon={Wallet} tint="bg-mint" /><Metric title="Verification" value={demo ? 'Demo verified' : 'Verified'} icon={ShieldCheck} tint="bg-peach" /></View>}
-        <View className="flex-row flex-wrap gap-7"><View className="min-w-[260px] flex-1 gap-5"><View className="flex-row items-center justify-between"><Heading className="text-xl">{tab === 'explore' ? 'Your local job feed' : 'On your schedule'}</Heading><Badge label={`${activeJobs.length} ACTIVE`} /></View>{activeJobs.length ? activeJobs.map(job => <JobRow key={job.id} job={job} worker onPress={() => onJob(job.id)} />) : <EmptyState title="All caught up" description="New requests assigned to you will arrive here in real time." />}</View>{width >= 1200 && <View className="w-[300px] gap-5"><View className="gap-4 rounded-lg bg-mint p-6"><ShieldCheck size={30} color="#287454" /><Heading className="text-lg">Trusted in your neighborhood.</Heading><Copy className="text-[13px] text-muted">Aadhaar & e-Shram</Copy><Badge label={demo ? 'Simulation complete' : 'Identity verified'} icon /></View></View>}</View>
+
+      {tab === 'account' ? <View className="max-w-2xl gap-6"><View className="flex-row items-center gap-5 border-b border-line pb-6"><Avatar name={profile.name} large /><View className="gap-2"><Heading>{profile.name}</Heading><RoleBadge role={profile.role} /></View></View><Field label="Mobile number" value={profile.phone} editable={false} /><View className="flex-row items-center gap-3"><ShieldCheck size={22} color="#287454" /><Copy>Identity: Verified</Copy></View><Copy className="text-muted">{locationLabel}</Copy><Notice kind="info" message="This is an interactive prototype. Bookings persist locally on this browser. You can freely switch roles below." /><Button label={`Switch to demo ${worker ? 'customer' : 'worker'}`} variant="secondary" onPress={() => void loginDemo(worker ? 'customer' : 'worker')} /><Button label="Sign out" variant="secondary" onPress={() => void logout()} /></View> : tab === 'earnings' ? <View className="gap-7"><View className="flex-row flex-wrap gap-4"><Metric title="Total earned" value={money(completedJobs.reduce((total, job) => total + job.amount, 0))} icon={Wallet} tint="bg-mint" /><Metric title="Awaiting completion" value={money(activeJobs.reduce((total, job) => total + job.amount, 0))} icon={Clock3} tint="bg-peach" /><Metric title="Jobs completed" value={String(completedJobs.length).padStart(2, '0')} icon={BadgeCheck} tint="bg-lilac" /></View><Heading className="text-lg">Payment history</Heading>{completedJobs.length ? completedJobs.map(job => <Panel key={job.id} className="flex-row items-center gap-4 p-5"><View className="h-11 w-11 items-center justify-center rounded-lg bg-mint"><ArrowDownLeft size={21} color="#287454" /></View><View className="flex-1"><Copy className="font-semibold">{job.title}</Copy><Copy className="text-xs text-muted">{job.customerName} · Simulated payout</Copy></View><Copy className="font-bold text-primary">+{money(job.amount)}</Copy></Panel>) : <EmptyState title="Your first earnings are ahead" description="Completed, confirmed jobs will appear here." />}</View> : tab === 'bookings' ? <View className="gap-4">{jobs.length ? jobs.map(job => <JobRow key={job.id} job={job} worker={worker} onPress={() => onJob(job.id)} />) : <EmptyState title="No bookings yet" description="Click on a problem on the home screen to hire a local verified worker." action={!worker ? <Button label="Browse service problems" onPress={() => setTab('home')} /> : undefined} />}</View> : worker ? <>
+        {tab === 'home' && <View className="flex-row flex-wrap gap-4"><Metric title="Assigned jobs" value={String(activeJobs.length).padStart(2, '0')} icon={CalendarDays} tint="bg-sky" /><Metric title="Your earnings" value={money(completedJobs.reduce((total, job) => total + job.amount, 0))} icon={Wallet} tint="bg-mint" /><Metric title="Verification" value="Verified" icon={ShieldCheck} tint="bg-peach" /></View>}
+        <View className="flex-row flex-wrap gap-7"><View className="min-w-[260px] flex-1 gap-5"><View className="flex-row items-center justify-between"><Heading className="text-xl">Your Assigned Job Requests</Heading><Badge label={`${activeJobs.length} ACTIVE`} /></View>{activeJobs.length ? activeJobs.map(job => <JobRow key={job.id} job={job} worker onPress={() => onJob(job.id)} />) : <EmptyState title="No active job requests" description="When a customer requests help in your category, the job will appear here." />}</View><View className="w-full md:w-[300px] gap-5"><View className="gap-4 rounded-lg bg-mint p-6"><ShieldCheck size={30} color="#287454" /><Heading className="text-lg">Prototype Worker Workspace</Heading><Copy className="text-[13px] text-muted">To start a job, open it and enter any number (e.g. 1212). The start code unlocks the job and puts it in progress.</Copy><Badge label="Dual-ID Verified" icon /></View></View></View>
       </> : <>
-        <View className="flex-row items-center gap-3"><View className="min-h-14 flex-1 flex-row items-center gap-3 rounded-lg border border-line bg-white px-4"><Search size={20} color="#7A8981" /><TextInput accessibilityLabel="Search services or professionals" placeholder="What can we help you with today?" placeholderTextColor="#8A978F" value={query} onChangeText={setQuery} className="min-h-14 flex-1 font-sans text-[14px] text-ink" /><View className="hidden sm:flex"><MapPin size={17} color="#287454" /></View></View><Button label="Filters" icon={SlidersHorizontal} variant="secondary" className="min-h-14 px-4" onPress={() => setFilterOpen(true)} /></View>
-        {tab === 'home' && <View className="overflow-hidden rounded-lg bg-[#E8F0E8]"><View className="flex-row"><View className="flex-1 gap-2 p-6 md:p-7"><View className="mb-1 flex-row items-center gap-2"><View className="h-1.5 w-1.5 rounded-full bg-primary" /><Copy className="font-bold text-[10px] text-primary">SMALL FIXES. BIG PEACE OF MIND.</Copy></View><Heading className="text-[25px] leading-[33px]">Your home.{ '\n' }In good, local hands.</Heading><Copy className="max-w-[300px] text-xs text-muted">Skilled people from your neighborhood.</Copy><TextLink label="Find your professional" onPress={() => setTab('explore')} /></View>{width >= 650 && <Image accessibilityLabel="A bright, carefully maintained neighborhood home" source={{ uri: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=700&auto=format&fit=crop&q=80' }} className="w-[40%] bg-mint" resizeMode="cover" />}</View></View>}
-        <View className="gap-4"><View className="flex-row items-center justify-between"><Heading className="text-lg">What needs a little care?</Heading>{category !== 'All services' && <TextLink label="All services" onPress={() => setCategory('All services')} />}</View><View className="flex-row flex-wrap gap-3">{categories.map(({ name, icon: Icon, color, ink }) => <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ selected: category === name }} onPress={() => setCategory(category === name ? 'All services' : name)} className={`min-w-[88px] flex-1 items-center gap-3 rounded-lg border px-2 py-5 ${category === name ? 'border-primary bg-mint' : 'border-line bg-white'}`}><View className={`h-11 w-11 items-center justify-center rounded-lg ${color}`}><Icon size={24} color={ink} strokeWidth={1.7} /></View><Copy className="font-medium text-xs">{name}</Copy></Pressable>)}</View></View>
-        <View className="flex-row flex-wrap items-start gap-6"><View className="min-w-[260px] flex-1 gap-4"><View className="flex-row items-center justify-between"><View><Heading className="text-lg">{tab === 'saved' ? 'Your saved professionals' : 'Good people, right nearby'}</Heading><Copy className="text-xs text-muted">{demo ? 'Sample professionals' : 'Verified professionals'} within 5 km</Copy></View><Badge label={`${filtered.length} NEAR YOU`} /></View>
-          {!locationReady ? <EmptyState title="Where do you need a hand?" description="Choose your location to see verified professionals within 5 kilometers." action={<Button label="Use my location" icon={MapPin} onPress={() => void updateLocation()} />} /> : !filtered.length ? <EmptyState title={loading ? 'Finding your neighbors...' : 'No matches just yet'} description={tab === 'saved' ? 'Save a professional to keep them close at hand.' : 'Try another service or adjust your filters.'} /> : <View className="flex-row flex-wrap gap-4">{filtered.slice(0, tab === 'home' ? 4 : undefined).map(person => <View key={person.id} className={width >= 1400 || (width >= 750 && width < 1200) ? 'min-w-[240px] flex-1 basis-[45%]' : 'w-full'}><ProfessionalCard person={person} saved={saved.includes(person.id)} onSave={() => toggleSave(person.id)} onBook={() => setSelected(person)} /></View>)}</View>}
-          {tab === 'home' && filtered.length > 4 && <TextLink label="Explore all professionals" onPress={() => setTab('explore')} />}
+        <View className="flex-row items-center gap-2 md:gap-3"><View className="min-h-11 flex-1 flex-row items-center gap-2 rounded-lg border border-line bg-white px-3 md:min-h-14 md:gap-3 md:px-4"><Search size={18} color="#7A8981" /><TextInput accessibilityLabel="Search problems" placeholder="Search your problem (e.g. tap leaking, fan broken...)" placeholderTextColor="#8A978F" value={query} onChangeText={setQuery} className="min-h-11 flex-1 font-sans text-[12px] text-ink md:min-h-14 md:text-[14px]" /><View className="hidden sm:flex"><MapPin size={15} color="#287454" /></View></View></View>
+
+        {tab === 'home' && <View className="overflow-hidden rounded-lg bg-[#E8F0E8]"><View className="flex-row"><View className="flex-1 gap-1.5 p-4 md:gap-2 md:p-7"><View className="mb-0.5 flex-row items-center gap-1.5 md:mb-1 md:gap-2"><View className="h-1.5 w-1.5 rounded-full bg-primary" /><Copy className="font-bold text-[9px] text-primary md:text-[10px]">INSTANT PROBLEM MATCHING</Copy></View><Heading className="text-[18px] leading-[24px] md:text-[25px] md:leading-[33px]">Have a problem at home?{ '\n' }Hire a verified worker in seconds.</Heading><Copy className="max-w-[420px] text-[10px] text-muted md:text-xs">Select your issue below, describe what is needed, and our system automatically matches you with a qualified local technician within 5 km.</Copy></View>{width >= 650 && <Image accessibilityLabel="A bright neighborhood home" source={{ uri: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=700&auto=format&fit=crop&q=80' }} className="w-[36%] bg-mint" resizeMode="cover" />}</View></View>}
+
+        <View className="gap-3 md:gap-4">
+          <View className="flex-row items-center justify-between">
+            <Heading className="text-base md:text-lg">What needs fixing today?</Heading>
+            {category !== 'All services' && <TextLink label="Show all" onPress={() => setCategory('All services')} />}
+          </View>
+          <View className="flex-row flex-wrap gap-2 md:gap-3">
+            {problemServices.map(({ name, icon: Icon, color, ink }) => <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ selected: category === name }} onPress={() => setCategory(category === name ? 'All services' : name)} className={`min-w-[72px] flex-1 items-center gap-2 rounded-lg border px-1.5 py-3 md:min-w-[88px] md:gap-3 md:px-2 md:py-4 ${category === name ? 'border-primary bg-mint' : 'border-line bg-white'}`}><View className={`h-9 w-9 items-center justify-center rounded-lg md:h-11 md:w-11 ${color}`}><Icon size={20} color={ink} strokeWidth={1.7} /></View><Copy className="font-medium text-[10px] text-center md:text-xs">{name}</Copy></Pressable>)}
+          </View>
         </View>
-        {tab === 'home' && <View className={width >= 1200 ? 'w-[300px] gap-5' : 'w-full gap-5'}><View className="flex-row items-center justify-between"><Heading className="text-lg">Your next booking</Heading><CalendarDays size={17} color="#7A8981" /></View>{activeJob ? <Panel className="gap-4 p-5"><View className="flex-row items-center justify-between"><Badge label={statusLabels[activeJob.status]} tone="amber" /><Copy className="text-[10px] text-muted">{activeJob.id}</Copy></View><Heading className="text-[17px]">{activeJob.title}</Heading><View className="flex-row items-center gap-3"><Avatar name={activeJob.workerName} uri={professionals.find(person => person.id === activeJob.workerId)?.image} /><View><Copy className="font-semibold text-xs">{activeJob.workerName}</Copy><Copy className="text-[11px] text-muted">{activeJob.category} professional</Copy></View></View><View className="flex-row items-center gap-2 border-y border-line py-3"><Clock3 size={15} color="#7A8981" /><Copy className="text-xs">{new Date(activeJob.scheduledAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} · {new Date(activeJob.scheduledAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</Copy></View><Timeline job={activeJob} /><Button label="View booking" icon={ArrowRight} variant="secondary" onPress={() => onJob(activeJob.id)} /><SOSButton jobId={activeJob.id} demo={demo} onRecord={() => recordSOS(activeJob)} /></Panel> : <Panel className="gap-3 p-6"><CalendarDays size={26} color="#7A8981" /><Copy className="font-semibold">Nothing on the calendar.</Copy><Copy className="text-xs text-muted">A little help is one booking away.</Copy></Panel>}<View className="flex-row items-start gap-3 px-1 py-2"><ShieldCheck size={22} color="#287454" /><View className="flex-1"><Copy className="font-semibold text-xs">Your peace of mind comes first.</Copy><Copy className="mt-1 text-[11px] leading-[18px] text-muted">Verified identities. Secure start codes.{ '\n' }Real people you can count on.</Copy></View></View></View>}
+
+        <View className="flex-col md:flex-row gap-4 md:gap-6">
+          <View className="flex-1 gap-3 md:gap-4">
+            <View className="flex-row items-center justify-between">
+              <Heading className="text-base md:text-lg">Select a Problem to Hire a Worker</Heading>
+              <Badge label={`${filteredServices.length} CATEGORIES`} />
+            </View>
+
+            <View className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              {filteredServices.map(service => {
+                const Icon = service.icon;
+                return <Panel key={service.name} className="gap-3 p-4 hover:border-primary transition-all md:gap-4 md:p-5">
+                  <View className="flex-row items-start gap-2.5 md:gap-3">
+                    <View className={`h-10 w-10 items-center justify-center rounded-lg md:h-12 md:w-12 ${service.color}`}>
+                      <Icon size={20} color={service.ink} />
+                    </View>
+                    <View className="flex-1 gap-0.5 md:gap-1">
+                      <Heading className="text-[14px] md:text-base">{service.title}</Heading>
+                      <Copy className="text-[10px] text-muted md:text-xs">{service.tagline}</Copy>
+                    </View>
+                  </View>
+
+                  <View className="flex-row flex-wrap gap-1 py-0.5 md:gap-1.5 md:py-1">
+                    {service.commonIssues.slice(0, 2).map(issue => (
+                      <View key={issue} className="rounded bg-mint px-1.5 py-0.5 md:px-2 md:py-1">
+                        <Copy className="text-[9px] text-primary md:text-[11px]">{issue}</Copy>
+                      </View>
+                    ))}
+                  </View>
+
+                  <View className="flex-row items-center justify-end border-t border-line pt-2.5 md:pt-3">
+                    <Button label="State problem & Request" icon={ArrowRight} onPress={() => setSelectedService(service)} />
+                  </View>
+                </Panel>;
+              })}
+            </View>
+          </View>
+
+          {tab === 'home' && <View className="w-full md:w-[320px] gap-4 md:gap-5">
+            <View className="flex-row items-center justify-between"><Heading className="text-base md:text-lg">Your Active Booking</Heading><CalendarDays size={16} color="#7A8981" /></View>
+            {activeJob ? <Panel className="gap-3 p-4 md:gap-4 md:p-5">
+              <View className="flex-row items-center justify-between"><Badge label={statusLabels[activeJob.status]} tone="amber" /><Copy className="text-[10px] text-muted">{activeJob.id}</Copy></View>
+              <Heading className="text-[17px]">{activeJob.title}</Heading>
+              <View className="gap-1">
+                <Copy className="font-semibold text-xs text-primary">Assigned {activeJob.category} Technician</Copy>
+                <Copy className="text-[11px] text-muted">{activeJob.address}</Copy>
+              </View>
+              <View className="flex-row items-center gap-2 border-y border-line py-3"><Clock3 size={15} color="#7A8981" /><Copy className="text-xs">{new Date(activeJob.scheduledAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} · {new Date(activeJob.scheduledAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</Copy></View>
+              <Timeline job={activeJob} />
+              <Button label="View details & Start Code" icon={ArrowRight} variant="secondary" onPress={() => onJob(activeJob.id)} />
+            </Panel> : <Panel className="gap-2.5 p-4 md:gap-3 md:p-6"><CalendarDays size={22} color="#7A8981" /><Copy className="font-semibold text-[13px] md:text-[14px]">No active service requests.</Copy><Copy className="text-[10px] text-muted md:text-xs">Click any problem category on the left to hire a worker.</Copy></Panel>}
+
+            <View className="gap-2.5 rounded-lg border border-[#CDDCD0] bg-mint p-4 md:gap-3 md:p-5">
+              <View className="flex-row items-center gap-2">
+                <ShieldCheck size={18} color="#287454" />
+                <Heading className="text-[13px] md:text-sm">How LocalFix Works</Heading>
+              </View>
+              <Copy className="text-[10px] leading-4 text-muted md:text-xs md:leading-5">1. Select your problem category</Copy>
+              <Copy className="text-[10px] leading-4 text-muted md:text-xs md:leading-5">2. State the issue & your address</Copy>
+              <Copy className="text-[10px] leading-4 text-muted md:text-xs md:leading-5">3. Verified local worker is automatically matched</Copy>
+              <Copy className="text-[10px] leading-4 text-muted md:text-xs md:leading-5">4. Share your 4-digit code when worker arrives</Copy>
+            </View>
+          </View>}
         </View>
       </>}
-      <View className="mt-2 flex-row flex-wrap items-center justify-between gap-3 border-t border-line pt-5"><View className="flex-row items-center gap-2"><House size={13} color="#8B9A90" /><Copy className="text-[11px] text-muted">A little more local. A lot more human.</Copy></View><Copy className="text-[10px] text-muted">LOCALFIX {demo ? '· DEMO WORKSPACE' : '· COMMUNITY FIRST'}</Copy></View>
+
+      <View className="mt-1 flex-row flex-wrap items-center justify-between gap-2 border-t border-line pt-4 md:mt-2 md:gap-3 md:pt-5"><View className="flex-row items-center gap-1.5 md:gap-2"><House size={12} color="#8B9A90" /><Copy className="text-[9px] text-muted md:text-[11px]">LocalFix Prototype · 5 km Hyperlocal Gig Services</Copy></View><Copy className="text-[8px] text-muted md:text-[10px]">DEMO MODE ACTIVE</Copy></View>
     </View></ScrollView>
-    <Sheet visible={filterOpen} title="Find your right fit" onClose={() => setFilterOpen(false)}><View className="flex-row items-center justify-between"><Copy>Available professionals only</Copy><Switch accessibilityLabel="Available professionals only" value={onlyAvailable} onValueChange={setOnlyAvailable} trackColor={{ false: '#DDE5DF', true: '#287454' }} /></View><Heading className="text-base">Sort by</Heading>{(['recommended', 'distance', 'price'] as const).map(option => <Pressable key={option} accessibilityRole="radio" accessibilityState={{ checked: sort === option }} onPress={() => setSort(option)} className="min-h-11 flex-row items-center justify-between"><Copy>{option === 'recommended' ? 'Top rated' : option === 'distance' ? 'Nearest first' : 'Lowest hourly rate'}</Copy>{sort === option && <Check size={18} color="#287454" />}</Pressable>)}<Button label="Show professionals" onPress={() => setFilterOpen(false)} /></Sheet>
-    {selected && <BookingSheet person={selected} onClose={() => setSelected(null)} onBooked={id => { setSelected(null); onJob(id); }} />}
+
+    {selectedService && <HireWorkerSheet service={selectedService} onClose={() => setSelectedService(null)} onBooked={id => { setSelectedService(null); onJob(id); }} />}
   </Shell>;
 }
 
 function Metric({ title, value, icon: Icon, tint }: { title: string; value: string; icon: LucideIcon; tint: string }) { return <Panel className="min-w-[170px] flex-1 gap-5 p-5"><View className="flex-row items-center justify-between"><Copy className="text-xs text-muted">{title}</Copy><View className={`h-9 w-9 items-center justify-center rounded-lg ${tint}`}><Icon size={18} color="#287454" /></View></View><Heading className="text-[26px]">{value}</Heading></Panel>; }
-function ProfessionalCard({ person, saved, onSave, onBook }: { person: Professional; saved: boolean; onSave: () => void; onBook: () => void }) {
-  return <Panel className="gap-4 p-5"><View className="flex-row items-start gap-3"><Avatar name={person.name} uri={person.image} large /><View className="flex-1 gap-1"><View className="flex-row items-center gap-1"><Copy className="font-bold text-[15px]">{person.name}</Copy><BadgeCheck size={15} color="#287454" /></View><Copy className="text-xs text-muted">{person.category} specialist</Copy><View className="flex-row items-center gap-1"><Star size={12} color="#C79B4B" fill="#C79B4B" /><Copy className="font-semibold text-xs">{person.rating}</Copy><Copy className="text-[11px] text-muted">({person.reviews} reviews)</Copy></View></View><IconButton icon={Bookmark} label={saved ? `Unsave ${person.name}` : `Save ${person.name}`} active={saved} onPress={onSave} /></View><View className="flex-row flex-wrap items-center gap-3"><View className="flex-row items-center gap-1"><MapPin size={13} color="#7A8981" /><Copy className="text-xs text-muted">{person.distance.toFixed(1)} km away</Copy></View><Badge label={person.available ? 'Available today' : 'Currently booked'} tone={person.available ? 'green' : 'gray'} /></View><View className="flex-row items-center justify-between border-t border-line pt-3"><Copy className="text-xs text-muted"><Copy className="font-bold text-base">{money(person.hourlyRate)}</Copy> / hour</Copy><Pressable accessibilityRole="button" accessibilityLabel={`View ${person.name}`} onPress={onBook} className="min-h-10 flex-row items-center gap-2 rounded-lg bg-mint px-3"><Copy className="font-semibold text-xs text-primary">View profile</Copy><ArrowUpRight size={14} color="#287454" /></Pressable></View></Panel>;
+function JobRow({ job, worker, onPress }: { job: Job; worker: boolean; onPress: () => void }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={`Open ${job.title}`} onPress={onPress}>
+    <Panel className="gap-4 p-5">
+      <View className="flex-row items-center justify-between gap-3"><Badge label={statusLabels[job.status]} tone={job.status === 'requested' || job.status === 'accepted' ? 'amber' : 'green'} /><Copy className="font-bold">{money(job.amount)}</Copy></View>
+      <View className="flex-row items-center gap-3">
+        <View className="flex-1 gap-1">
+          <Heading className="text-lg">{job.title}</Heading>
+          <Copy className="text-xs text-muted">{worker ? job.customerName : `Assigned ${job.category} Technician`} · {job.category}</Copy>
+          <Copy className="text-xs text-muted">{job.address}</Copy>
+        </View>
+        <ChevronRight size={20} color="#287454" />
+      </View>
+    </Panel>
+  </Pressable>;
 }
-function JobRow({ job, worker, onPress }: { job: Job; worker: boolean; onPress: () => void }) { return <Pressable accessibilityRole="button" accessibilityLabel={`Open ${job.title}`} onPress={onPress}><Panel className="gap-4 p-5"><View className="flex-row items-center justify-between gap-3"><Badge label={statusLabels[job.status]} tone={job.status === 'requested' || job.status === 'accepted' ? 'amber' : 'green'} /><Copy className="font-bold">{money(job.amount)}</Copy></View><View className="flex-row items-center gap-3"><View className="flex-1 gap-1"><Heading className="text-lg">{job.title}</Heading><Copy className="text-xs text-muted">{worker ? job.customerName : job.workerName} · {job.category}</Copy><Copy className="text-xs text-muted">{job.address}</Copy></View><ChevronRight size={20} color="#287454" /></View></Panel></Pressable>; }
-function BookingSheet({ person, onClose, onBooked }: { person: Professional; onClose: () => void; onBooked: (id: string) => void }) {
+
+function HireWorkerSheet({ service, onClose, onBooked }: { service: typeof problemServices[0]; onClose: () => void; onBooked: (id: string) => void }) {
   const { profile, mode } = useAuth();
   const book = useBookings(state => state.book);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(service.commonIssues[0] || `${service.name} issue`);
   const [description, setDescription] = useState('');
-  const [address, setAddress] = useState(mode === 'demo' ? '24, 12th Main Road, Indiranagar' : '');
+  const [address, setAddress] = useState('24, 12th Main Road, Indiranagar, Bengaluru');
   const [day, setDay] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const submit = async () => { if (!profile) return; setBusy(true); try { const id = await book({ worker: person, title, description, address, scheduledAt: new Date(Date.now() + (day * 24 + 2) * 3600000).toISOString() }, profile, mode === 'demo'); onBooked(id); } catch (cause) { setError(errorMessage(cause)); } finally { setBusy(false); } };
-  return <Sheet visible title="A good match for your home" onClose={onClose}><View className="flex-row items-center gap-4"><Avatar uri={person.image} name={person.name} large /><View className="flex-1 gap-1"><Heading className="text-xl">{person.name}</Heading><Copy className="text-xs text-muted">{person.title}</Copy><Badge label="Identity verified" icon /></View></View><View className="flex-row items-center gap-4"><Copy>{person.rating} / 5 · {person.reviews} reviews</Copy><Copy className="text-muted">{person.distance.toFixed(1)} km away</Copy></View><Field label="What needs fixing?" placeholder="e.g. Kitchen tap repair" value={title} onChangeText={setTitle} maxLength={100} /><Field label="A few details" placeholder="Tell your professional a little more..." value={description} onChangeText={setDescription} multiline maxLength={1000} className="min-h-24" /><Field label="Service address" placeholder="House number, street, neighborhood" value={address} onChangeText={setAddress} maxLength={300} /><View className="flex-row gap-3">{['Today', 'Tomorrow'].map((label, index) => <Button key={label} label={label} variant={day === index ? 'primary' : 'secondary'} className="flex-1" onPress={() => setDay(index)} />)}</View><View className="flex-row justify-between border-t border-line pt-4"><Copy>First-hour estimate</Copy><Copy className="font-bold">{money(person.hourlyRate)}</Copy></View><Notice kind="info" message={mode === 'demo' ? 'Demo booking: the estimated amount is placed in simulated escrow. No charge is made.' : 'This sends a booking request. Escrow must be funded through the payment provider before work can start. No payment is collected on this screen.'} /><Notice message={error} /><Button label="Request booking" icon={ArrowRight} loading={busy} disabled={!person.available} onPress={() => void submit()} /></Sheet>;
+
+  const submit = async () => {
+    if (!profile) return;
+    setBusy(true);
+    try {
+      const assignedWorker: Professional = professionals.find(p => p.category === service.name) ?? professionals[0]!;
+      const id = await book({
+        worker: { ...assignedWorker, hourlyRate: service.rate },
+        title,
+        description,
+        address,
+        scheduledAt: new Date(Date.now() + (day * 24 + 1) * 3600000).toISOString()
+      }, profile, mode === 'demo');
+      onBooked(id);
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const Icon = service.icon;
+
+  return <Sheet visible title="State Problem & Hire Worker" onClose={onClose}>
+    <View className="flex-row items-center gap-3 rounded-lg bg-mint p-4">
+      <View className={`h-11 w-11 items-center justify-center rounded-lg ${service.color}`}>
+        <Icon size={22} color={service.ink} />
+      </View>
+      <View className="flex-1">
+        <Heading className="text-base">{service.title}</Heading>
+        <Copy className="text-xs text-muted">A verified local technician within 5 km will be assigned</Copy>
+      </View>
+    </View>
+
+    <View className="gap-2">
+      <Copy className="font-semibold text-xs text-muted">COMMON PROBLEMS (CLICK TO SELECT):</Copy>
+      <View className="flex-row flex-wrap gap-2">
+        {service.commonIssues.map(issue => (
+          <Pressable key={issue} accessibilityRole="button" onPress={() => setTitle(issue)} className={`rounded-lg border px-3 py-1.5 ${title === issue ? 'border-primary bg-mint' : 'border-line bg-white'}`}>
+            <Copy className={`text-xs ${title === issue ? 'font-bold text-primary' : 'text-muted'}`}>{issue}</Copy>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+
+    <Field label="State your problem" placeholder="e.g. Kitchen sink tap is leaking constantly" value={title} onChangeText={setTitle} maxLength={100} />
+    <Field label="Additional details (optional)" placeholder="e.g. Need quick repair, tap is dripping into bucket" value={description} onChangeText={setDescription} multiline maxLength={1000} className="min-h-20" />
+    <Field label="Service address" placeholder="House/Flat number, Street, Neighborhood" value={address} onChangeText={setAddress} maxLength={300} />
+
+    <View className="flex-row gap-3">
+      {['Today (within 1 hr)', 'Tomorrow'].map((label, index) => (
+        <Button key={label} label={label} variant={day === index ? 'primary' : 'secondary'} className="flex-1" onPress={() => setDay(index)} />
+      ))}
+    </View>
+
+    <Notice kind="info" message="Automatic worker assignment: Once you click Request Worker Now, a verified 5 km local technician will review your problem and provide a quote." />
+    <Notice message={error} />
+
+    <Button label="Request Worker Now" icon={ArrowRight} loading={busy} onPress={() => void submit()} />
+  </Sheet>;
 }
