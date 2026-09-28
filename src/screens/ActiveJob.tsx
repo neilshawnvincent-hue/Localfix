@@ -85,7 +85,13 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
       </> : <>
         <View className="flex-row items-center gap-2"><MapPin size={18} color="#287454" /><Heading className="text-base md:text-lg">You have arrived</Heading></View>
         <Copy className="text-[12px] text-muted md:text-[13px]">Inspect the problem. Once you are ready, provide a quote to the customer.</Copy>
-        <Button label="Provide Quote (₹400)" loading={busy} onPress={() => void runAction('quote', 400)} />
+        
+        <View className="gap-1.5">
+          <Copy className="font-semibold text-xs text-muted">Service Quote Amount (₹)</Copy>
+          <TextInput testID="worker-quote-amount" accessibilityLabel="Quote Amount" placeholder="Enter amount (e.g. 500)" placeholderTextColor="#AAB9AE" value={entered} onChangeText={setEntered} keyboardType="number-pad" autoComplete="off" className="h-[48px] rounded-lg border border-[#CDDCD0] bg-white px-3 font-displaybold text-[18px] text-primary md:h-[52px] md:text-[20px]" />
+        </View>
+
+        <Button label={`Send Quote ${entered ? `(₹${entered})` : ''}`} disabled={!entered || isNaN(Number(entered)) || Number(entered) <= 0} loading={busy} onPress={() => void runAction('quote', Number(entered))} />
       </>)}
 
       {job.status === 'quoted' && (customer ? <>
