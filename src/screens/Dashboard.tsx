@@ -22,7 +22,7 @@ const problemServices = [
 
 export function Dashboard({ onJob }: { onJob: (id: string) => void }) {
   const { profile, mode, logout, loginDemo } = useAuth();
-  const { demoJobs, liveJobs, refresh } = useBookings();
+  const { demoJobs, liveJobs, refresh, receiveDemoJob } = useBookings();
   const { width } = useWindowDimensions();
   const [tab, setTab] = useState<Tab>('home');
   const [category, setCategory] = useState<Category>('All services');
@@ -31,7 +31,7 @@ export function Dashboard({ onJob }: { onJob: (id: string) => void }) {
   const [locationLabel] = useState('Indiranagar, Bengaluru (5 km radius)');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [available, setAvailable] = useState(true);
+  const [available, setAvailable] = useState(false);
   const worker = profile?.role === 'worker';
   const demo = mode === 'demo';
   const jobs = (demo ? demoJobs : liveJobs).filter(job => profile && canViewJob(job, profile));
@@ -44,6 +44,17 @@ export function Dashboard({ onJob }: { onJob: (id: string) => void }) {
     setLoading(true);
     try { await refresh(); setError(null); } catch (cause) { setError(errorMessage(cause)); } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    if (worker && demo && available) {
+      const timer = setTimeout(() => {
+        if (!activeJobs.some(j => j.status === 'requested')) {
+          receiveDemoJob();
+        }
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [worker, demo, available, receiveDemoJob, activeJobs]);
 
   const filteredServices = problemServices.filter(s =>
     (category === 'All services' || s.name === category) &&

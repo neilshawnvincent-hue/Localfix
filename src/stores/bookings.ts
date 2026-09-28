@@ -23,15 +23,17 @@ interface BookingState {
   startCode: (jobId: string, actor: Profile, demo: boolean) => Promise<string>;
   endCode: (jobId: string, actor: Profile, demo: boolean) => Promise<string>;
   transition: (jobId: string, action: 'accept' | 'start' | 'complete' | 'cancel' | 'quote' | 'customer_accept' | 'simulate_worker_start' | 'simulate_worker_end', actor: Profile, demo: boolean, code?: string, amount?: number) => Promise<void>;
+  receiveDemoJob: () => void;
 }
 let liveRevision = 0;
 export const useBookings = create<BookingState>()(persist((set, get) => ({
   demoJobs: [], secrets: {}, endSecrets: {}, liveJobs: [], attempts: {}, saved: [],
   seedDemo: async () => {
     await useBookings.persist.rehydrate();
-    if (get().demoJobs.length) return;
+  },
+  receiveDemoJob: () => {
     const job = initialDemoJob();
-    set({ demoJobs: [job], secrets: { [job.id]: generateStartCode(Crypto.getRandomValues) }, endSecrets: { [job.id]: generateStartCode(Crypto.getRandomValues) } });
+    set(state => ({ demoJobs: [job, ...state.demoJobs.filter(j => j.id !== job.id)], secrets: { ...state.secrets, [job.id]: generateStartCode(Crypto.getRandomValues) }, endSecrets: { ...state.endSecrets, [job.id]: generateStartCode(Crypto.getRandomValues) } }));
   },
   refresh: async () => {
     const revision = ++liveRevision;

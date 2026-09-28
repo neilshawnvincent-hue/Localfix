@@ -13,6 +13,6 @@ export const professionals: Professional[] = [
   { id: 'demo-worker-appliances', name: 'Imran Ali', category: 'Appliances', title: 'Getting everyday essentials running', rating: 4.9, reviews: 113, hourlyRate: 400, distance: 3.1, image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=240&h=240&fit=crop&crop=faces', available: true, coordinates: { latitude: 12.9544, longitude: 77.6448 } },
 ];
 export function initialDemoJob(): Job {
-  return { id: 'LF-2048', customerId: 'demo-customer', workerId: 'demo-worker', customerName: 'Ananya Sharma', workerName: 'Rajesh Kumar', category: 'Plumbing', title: 'Kitchen tap repair', description: 'The kitchen tap has a steady drip. Please check the washer and fittings.', address: '24, 12th Main Road, Indiranagar', scheduledAt: new Date(Date.now() + 3600000).toISOString(), amount: 450, status: 'accepted', createdAt: new Date().toISOString(), escrowStatus: 'demo_held' };
+  return { id: `LF-${Math.floor(1000 + Math.random() * 9000)}`, customerId: 'demo-customer', workerId: 'demo-worker', customerName: 'Ananya Sharma', workerName: 'Rajesh Kumar', category: 'Plumbing', title: 'Kitchen tap dripping constantly', description: 'The kitchen tap has a steady drip. Please check the washer and fittings.', address: '24, 12th Main Road, Indiranagar', scheduledAt: new Date(Date.now() + 3600000).toISOString(), amount: 0, status: 'requested', createdAt: new Date().toISOString(), escrowStatus: 'demo_held' };
 }
 export const neighborhood = { label: 'Indiranagar, Bengaluru', coordinates: DEFAULT_LOCATION };
