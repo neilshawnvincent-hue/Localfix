@@ -41,7 +41,7 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
       {job.status === 'requested' && (customer ? <>
         <View className="flex-row items-center gap-2"><CalendarDays size={18} color="#287454" /><Heading className="text-base md:text-lg">Waiting for worker</Heading></View>
         <Copy className="text-[12px] text-muted md:text-[13px]">Your request has been sent. Waiting for the professional to review and provide a quote.</Copy>
-        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Worker Quote (Demo)" variant="secondary" loading={busy} onPress={() => void runAction('quote', 400)} /></View>
+        <View className="border-t border-[#CDDCD0] pt-4"><Button label="View Worker Quote" variant="secondary" loading={busy} onPress={() => void runAction('quote', 400)} /></View>
       </> : <>
         <View className="flex-row items-center gap-2"><CalendarDays size={18} color="#287454" /><Heading className="text-base md:text-lg">New Request</Heading></View>
         <Copy className="text-[12px] text-muted md:text-[13px]">Review this request and provide a quote.</Copy>
@@ -62,7 +62,7 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
         <Copy className="text-[11px] text-muted md:text-[13px]">Share this code with your technician only when they arrive at your location.</Copy>
         <View testID="start-code" accessibilityLabel={`Secure Start Code ${code}`} className="flex-row justify-center gap-2 py-2 md:gap-3 md:py-3">{(code || '1234').split('').map((digit, index) => <View key={index} className="h-[56px] w-[44px] items-center justify-center rounded-lg border border-[#CDDCD0] bg-white md:h-[72px] md:w-[56px]"><Text className="font-displaybold text-[26px] text-primary md:text-[34px]">{digit}</Text></View>)}</View>
         <View className="flex-row items-center justify-center gap-2"><ShieldCheck size={13} color="#287454" /><Copy className="text-[10px] text-primary md:text-xs">Work stays locked until your code is confirmed.</Copy></View>
-        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Worker Start (Demo)" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_start')} /></View>
+        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Confirm Worker Arrival & Start" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_start')} /></View>
       </> : <>
         <View className="flex-row items-center gap-2"><LockKeyhole size={18} color="#287454" /><Heading className="text-base md:text-lg">Secure job start</Heading></View>
         <Copy className="text-[11px] text-muted md:text-[13px]">Enter the customer's Secure Start Code (any number works in this prototype):</Copy>
@@ -74,7 +74,7 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
         <View className="flex-row items-center gap-2"><CheckCheck size={18} color="#287454" /><Heading className="text-base md:text-lg">Your Completion Code</Heading></View>
         <Copy className="text-[11px] text-muted md:text-[13px]">Work is underway. Share this Completion Code when the work is fully completed to your satisfaction.</Copy>
         <View testID="end-code" accessibilityLabel={`Completion Code ${eCode}`} className="flex-row justify-center gap-2 py-2 md:gap-3 md:py-3">{(eCode || '5678').split('').map((digit, index) => <View key={index} className="h-[56px] w-[44px] items-center justify-center rounded-lg border border-[#CDDCD0] bg-white md:h-[72px] md:w-[56px]"><Text className="font-displaybold text-[26px] text-primary md:text-[34px]">{digit}</Text></View>)}</View>
-        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Work Completion (Demo)" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_end')} /></View>
+        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Confirm Work Completed" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_end')} /></View>
       </> : <>
         <View className="flex-row items-center gap-2"><CheckCheck size={18} color="#287454" /><Heading className="text-base md:text-lg">Work is underway</Heading></View>
         <Copy className="text-[11px] text-muted md:text-[13px]">When work is complete, enter the customer's Completion Code to release payment.</Copy>
