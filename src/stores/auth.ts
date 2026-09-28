@@ -73,6 +73,8 @@ export const useAuth = create<AuthState>()(persist((set, get) => ({
     if (get().busy) return;
     ++sessionRevision;
     await useAuth.persist.rehydrate();
+    const { useBookings } = await import('./bookings');
+    useBookings.getState().clearDemo();
     set({ profile: { ...demoProfiles[role], verification: 'verified' }, mode: 'demo', demoVerified: true, ready: true, error: null, pendingPhone: null });
   },
   logout: async () => {

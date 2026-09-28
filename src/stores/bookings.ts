@@ -24,6 +24,7 @@ interface BookingState {
   endCode: (jobId: string, actor: Profile, demo: boolean) => Promise<string>;
   transition: (jobId: string, action: 'accept' | 'start' | 'complete' | 'cancel' | 'quote' | 'customer_accept' | 'simulate_worker_start' | 'simulate_worker_end', actor: Profile, demo: boolean, code?: string, amount?: number) => Promise<void>;
   receiveDemoJob: () => void;
+  clearDemo: () => void;
 }
 let liveRevision = 0;
 export const useBookings = create<BookingState>()(persist((set, get) => ({
@@ -35,6 +36,7 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
     const job = initialDemoJob();
     set(state => ({ demoJobs: [job, ...state.demoJobs.filter(j => j.id !== job.id)], secrets: { ...state.secrets, [job.id]: generateStartCode(Crypto.getRandomValues) }, endSecrets: { ...state.endSecrets, [job.id]: generateStartCode(Crypto.getRandomValues) } }));
   },
+  clearDemo: () => set({ demoJobs: [], secrets: {}, endSecrets: {} }),
   refresh: async () => {
     const revision = ++liveRevision;
     const jobs = await fetchJobs();
