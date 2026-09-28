@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, BriefcaseBusiness, Check, House, MessageSquare, ShieldCheck, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, BriefcaseBusiness, Check, House, MessageSquare, ShieldCheck, Sparkles, Camera } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { Avatar, Badge, Button, Copy, Field, Heading, Logo, Notice, RoleBadge, TrustLine } from '../components/ui';
@@ -95,6 +95,6 @@ export function VerificationScreen() {
     <Field label="Aadhaar number" placeholder="Any number (e.g. 234567890123)" value={aadhaar} onChangeText={setAadhaar} keyboardType="number-pad" />
     <Field label="UAM / e-Shram number (UAN)" placeholder="Any number (e.g. 123456789012)" value={eshram} onChangeText={setEshram} keyboardType="number-pad" />
     <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => setConsent(!consent)} className="flex-row items-start gap-3 py-2"><View className={`h-5 w-5 items-center justify-center rounded border ${consent ? 'border-primary bg-primary' : 'border-muted'}`}>{consent && <Check size={14} color="white" />}</View><Copy className="flex-1 text-xs leading-5 text-muted">I consent to this prototype identity check.</Copy></Pressable>
-    <Button label={busy ? 'Verifying...' : 'Verify & Continue to Dashboard'} icon={ShieldCheck} loading={busy} onPress={() => void submit()} />
+    <Button label={busy ? 'Verifying...' : 'Take Selfie to Verify & Continue'} icon={Camera} loading={busy} onPress={() => void submit()} />
     <Notice message={error} /><Button label="Back to sign in" variant="ghost" icon={ArrowLeft} onPress={() => void logout()} /></View></ScrollView></KeyboardAvoidingView>;
 }
