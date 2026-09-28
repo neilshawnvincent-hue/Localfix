@@ -34,7 +34,7 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
   },
   receiveDemoJob: () => {
     const job = initialDemoJob();
-    set(state => ({ demoJobs: [job, ...state.demoJobs.filter(j => j.id !== job.id)], secrets: { ...state.secrets, [job.id]: generateStartCode(Crypto.getRandomValues) }, endSecrets: { ...state.endSecrets, [job.id]: generateStartCode(Crypto.getRandomValues) } }));
+    set(state => ({ demoJobs: [job, ...state.demoJobs.filter(j => j.id !== job.id)], secrets: { ...state.secrets, [job.id]: '0000' }, endSecrets: { ...state.endSecrets, [job.id]: '0000' } }));
   },
   clearDemo: () => set({ demoJobs: [], secrets: {}, endSecrets: {} }),
   refresh: async () => {
@@ -55,7 +55,7 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
     }
     const id = `LF-${Math.floor(1000 + Math.random() * 9000)}`;
     const job: Job = { id, customerId: actor.id, workerId: input.worker.id, customerName: actor.name, workerName: input.worker.name, category: input.worker.category, title: input.title.trim(), description: input.description.trim() || `Service request for ${input.worker.category}`, address: input.address.trim(), scheduledAt: input.scheduledAt, amount: 0, createdAt: new Date().toISOString(), status: 'requested', escrowStatus: 'demo_held' };
-    set(state => ({ demoJobs: [job, ...state.demoJobs.filter(j => j.id !== id)], secrets: { ...state.secrets, [id]: '1234' }, endSecrets: { ...state.endSecrets, [id]: '5678' } }));
+    set(state => ({ demoJobs: [job, ...state.demoJobs.filter(j => j.id !== id)], secrets: { ...state.secrets, [id]: '0000' }, endSecrets: { ...state.endSecrets, [id]: '0000' } }));
     return id;
   },
   startCode: async (jobId, actor, demo) => {
@@ -64,11 +64,11 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
       if (error) throw error;
       return String(data);
     }
-    return get().secrets[jobId] || '1234';
+    return get().secrets[jobId] || '0000';
   },
   endCode: async (jobId, actor, demo) => {
     if (!demo) return '0000'; // Real app logic here if needed
-    return get().endSecrets[jobId] || '5678';
+    return get().endSecrets[jobId] || '0000';
   },
   transition: async (jobId, action, actor, demo, code = '', amount = 0) => {
     if (!demo) {
@@ -86,7 +86,7 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
       nextStatus = 'accepted';
     } else if (action === 'start' || action === 'simulate_worker_start') {
       set(state => ({ attempts: { ...state.attempts, [jobId]: { count: 0, lockedUntil: 0 } } }));
-      nextStatus = 'in_progress';
+      nextStatus = 'arrived';
     } else if (action === 'complete' || action === 'simulate_worker_end') {
       nextStatus = 'completed';
     } else if (action === 'cancel') {
@@ -95,7 +95,7 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
       nextStatus = 'quoted';
       newAmount = amount;
     } else if (action === 'customer_accept') {
-      nextStatus = 'approved';
+      nextStatus = 'in_progress';
     } else {
       throw new Error('Unsupported action.');
     }

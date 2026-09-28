@@ -47,8 +47,8 @@ export function Sheet({ visible, title, children, onClose }: { visible: boolean;
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View className="flex-1 items-end justify-end bg-black/40 md:items-center md:justify-center md:p-4"><View accessibilityViewIsModal className="max-h-[92%] w-full max-w-xl rounded-t-xl bg-canvas md:rounded-lg"><View className="flex-row items-center justify-between border-b border-line px-4 py-3 md:px-6 md:py-4"><Heading className="flex-1 text-lg md:text-xl">{title}</Heading><IconButton label="Close dialog" icon={X} onPress={onClose} /></View><ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="gap-4 p-4 md:gap-5 md:p-6">{children}</ScrollView></View></View></Modal>;
 }
 export function Timeline({ job }: { job: Job }) {
-  const steps = ['Requested', 'On the way', 'Quoted', 'Approved', 'In progress', 'Completed'];
-  const current = ['requested', 'accepted', 'quoted', 'approved', 'in_progress', 'completed'].indexOf(job.status);
+  const steps = ['Requested', 'On the way', 'Arrived', 'Quoted', 'In progress', 'Completed'];
+  const current = ['requested', 'accepted', 'arrived', 'quoted', 'in_progress', 'completed'].indexOf(job.status);
   return <View className="gap-0">{steps.map((step, index) => <View key={step} className="flex-row gap-2.5"><View className="items-center"><View className={`h-6 w-6 items-center justify-center rounded-full md:h-7 md:w-7 ${index <= current ? 'bg-primary' : 'border border-line bg-white'}`}>{index < current ? <Check size={12} color="white" /> : <Text className={`font-semibold text-[10px] md:text-xs ${index === current ? 'text-white' : 'text-muted'}`}>{index + 1}</Text>}</View>{index < steps.length - 1 && <View className={`my-0.5 h-5 w-px md:my-1 md:h-6 ${index < current ? 'bg-primary' : 'bg-line'}`} />}</View><View className="pt-0.5"><Copy className={`text-[12px] md:text-[13px] ${index === current ? 'font-bold' : index < current ? 'text-primary' : 'text-muted'}`}>{step}</Copy></View></View>)}</View>;
 }
 export function SOSButton({ jobId, demo, onRecord }: { jobId: string; demo: boolean; onRecord: () => Promise<void> }) {

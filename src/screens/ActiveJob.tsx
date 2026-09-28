@@ -60,47 +60,48 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
 
       {job.status === 'accepted' && (customer ? <>
         <View className="flex-row items-center gap-2"><MapPin size={18} color="#287454" /><Heading className="text-base md:text-lg">Worker on the way</Heading></View>
-        <Copy className="text-[12px] text-muted md:text-[13px]">The professional has accepted your request and is heading to your location. They will inspect the problem and provide a quote.</Copy>
-        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Worker Arrival & Quote" variant="secondary" loading={busy} onPress={() => void runAction('quote', 400)} /></View>
+        <Copy className="text-[12px] text-muted md:text-[13px]">The professional is heading to your location. When they arrive, provide them this Arrival OTP:</Copy>
+        <View testID="start-code" accessibilityLabel={`Secure Start Code ${code}`} className="flex-row justify-center gap-2 py-2 md:gap-3 md:py-3">{(code || '0000').split('').map((digit, index) => <View key={index} className="h-[56px] w-[44px] items-center justify-center rounded-lg border border-[#CDDCD0] bg-white md:h-[72px] md:w-[56px]"><Text className="font-displaybold text-[26px] text-primary md:text-[34px]">{digit}</Text></View>)}</View>
+        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Worker Arrival" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_start')} /></View>
       </> : <>
         <View className="flex-row items-center gap-2"><MapPin size={18} color="#287454" /><Heading className="text-base md:text-lg">You are on the way</Heading></View>
-        <Copy className="text-[12px] text-muted md:text-[13px]">Travel to the customer's location. Once you arrive and inspect the problem, provide a service quote.</Copy>
-        <Button label="Arrived: Provide Quote" loading={busy} onPress={() => void runAction('quote', 400)} />
+        <Copy className="text-[12px] text-muted md:text-[13px]">Travel to the customer's location. Enter the customer's Arrival OTP (0000) when you reach:</Copy>
+        <TextInput testID="worker-start-code" accessibilityLabel="Customer Arrival OTP" placeholder="Enter code (0000)" placeholderTextColor="#AAB9AE" value={entered} onChangeText={setEntered} keyboardType="number-pad" autoComplete="off" className="h-[56px] rounded-lg border border-[#CDDCD0] bg-white px-4 text-center font-displaybold text-[24px] text-primary md:h-[72px] md:px-5 md:text-[32px]" />
+        <Button label="Verify Arrival" loading={busy} onPress={() => void runAction('start')} />
+      </>)}
+
+      {job.status === 'arrived' && (customer ? <>
+        <View className="flex-row items-center gap-2"><MapPin size={18} color="#287454" /><Heading className="text-base md:text-lg">Worker Arrived</Heading></View>
+        <Copy className="text-[12px] text-muted md:text-[13px]">The professional has arrived and is inspecting the problem. Please wait for them to provide a quote.</Copy>
+        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Worker Quote" variant="secondary" loading={busy} onPress={() => void runAction('quote', 400)} /></View>
+      </> : <>
+        <View className="flex-row items-center gap-2"><MapPin size={18} color="#287454" /><Heading className="text-base md:text-lg">You have arrived</Heading></View>
+        <Copy className="text-[12px] text-muted md:text-[13px]">Inspect the problem. Once you are ready, provide a quote to the customer.</Copy>
+        <Button label="Provide Quote (₹400)" loading={busy} onPress={() => void runAction('quote', 400)} />
       </>)}
 
       {job.status === 'quoted' && (customer ? <>
         <View className="flex-row items-center gap-2"><Wallet size={18} color="#287454" /><Heading className="text-base md:text-lg">Quote received</Heading></View>
         <Copy className="text-[12px] md:text-[13px]">The worker has inspected the problem and quoted <Copy className="font-bold text-primary">{money(job.amount)}</Copy> for this job.</Copy>
-        <Button label="Approve Quote & Hire" loading={busy} onPress={() => void runAction('customer_accept')} />
+        <Button label="Approve Quote & Start Work" loading={busy} onPress={() => void runAction('customer_accept')} />
       </> : <>
         <View className="flex-row items-center gap-2"><Wallet size={18} color="#287454" /><Heading className="text-base md:text-lg">Quote sent</Heading></View>
-        <Copy className="text-[12px] text-muted md:text-[13px]">Waiting for customer to accept your quote of {money(job.amount)}.</Copy>
-      </>)}
-
-      {job.status === 'approved' && (customer ? <>
-        <View className="flex-row items-center gap-2"><LockKeyhole size={18} color="#287454" /><Heading className="text-base md:text-lg">Your Secure Start Code</Heading></View>
-        <Copy className="text-[11px] text-muted md:text-[13px]">Share this code with your technician so they can begin the work.</Copy>
-        <View testID="start-code" accessibilityLabel={`Secure Start Code ${code}`} className="flex-row justify-center gap-2 py-2 md:gap-3 md:py-3">{(code || '1234').split('').map((digit, index) => <View key={index} className="h-[56px] w-[44px] items-center justify-center rounded-lg border border-[#CDDCD0] bg-white md:h-[72px] md:w-[56px]"><Text className="font-displaybold text-[26px] text-primary md:text-[34px]">{digit}</Text></View>)}</View>
-        <View className="flex-row items-center justify-center gap-2"><ShieldCheck size={13} color="#287454" /><Copy className="text-[10px] text-primary md:text-xs">Work stays locked until your code is confirmed.</Copy></View>
-        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Worker Start" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_start')} /></View>
-      </> : <>
-        <View className="flex-row items-center gap-2"><LockKeyhole size={18} color="#287454" /><Heading className="text-base md:text-lg">Secure job start</Heading></View>
-        <Copy className="text-[11px] text-muted md:text-[13px]">The quote is approved! Enter the customer's Secure Start Code (any number works in this prototype) to begin work:</Copy>
-        <TextInput testID="worker-start-code" accessibilityLabel="Customer Secure Start Code" placeholder="Enter code (e.g. 1212)" placeholderTextColor="#AAB9AE" value={entered} onChangeText={setEntered} keyboardType="number-pad" autoComplete="off" className="h-[56px] rounded-lg border border-[#CDDCD0] bg-white px-4 text-center font-displaybold text-[24px] text-primary md:h-[72px] md:px-5 md:text-[32px]" />
-        <Button label="Verify code & start job" icon={LockKeyhole} loading={busy} onPress={() => void runAction('start')} />
+        <Copy className="text-[12px] text-muted md:text-[13px]">Waiting for customer to accept your quote of {money(job.amount)} so work can begin.</Copy>
       </>)}
 
       {job.status === 'in_progress' && (customer ? <>
-        <View className="flex-row items-center gap-2"><CheckCheck size={18} color="#287454" /><Heading className="text-base md:text-lg">Your Completion Code</Heading></View>
-        <Copy className="text-[11px] text-muted md:text-[13px]">Work is underway. Share this Completion Code when the work is fully completed to your satisfaction.</Copy>
-        <View testID="end-code" accessibilityLabel={`Completion Code ${eCode}`} className="flex-row justify-center gap-2 py-2 md:gap-3 md:py-3">{(eCode || '5678').split('').map((digit, index) => <View key={index} className="h-[56px] w-[44px] items-center justify-center rounded-lg border border-[#CDDCD0] bg-white md:h-[72px] md:w-[56px]"><Text className="font-displaybold text-[26px] text-primary md:text-[34px]">{digit}</Text></View>)}</View>
-        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Confirm Work Completed" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_end')} /></View>
+        <View className="flex-row items-center gap-2"><CheckCheck size={18} color="#287454" /><Heading className="text-base md:text-lg">Work in progress</Heading></View>
+        <Copy className="text-[11px] text-muted md:text-[13px]">The professional is working on the problem. When finished, provide them this Finish OTP:</Copy>
+        <View testID="end-code" accessibilityLabel={`Finish OTP ${eCode}`} className="flex-row justify-center gap-2 py-2 md:gap-3 md:py-3">{(eCode || '0000').split('').map((digit, index) => <View key={index} className="h-[56px] w-[44px] items-center justify-center rounded-lg border border-[#CDDCD0] bg-white md:h-[72px] md:w-[56px]"><Text className="font-displaybold text-[26px] text-primary md:text-[34px]">{digit}</Text></View>)}</View>
+        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Worker Finish" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_end')} /></View>
       </> : <>
         <View className="flex-row items-center gap-2"><CheckCheck size={18} color="#287454" /><Heading className="text-base md:text-lg">Work is underway</Heading></View>
-        <Copy className="text-[11px] text-muted md:text-[13px]">When work is complete, enter the customer's Completion Code to release payment.</Copy>
-        <TextInput testID="worker-end-code" accessibilityLabel="Customer Completion Code" placeholder="Enter code (e.g. 5678)" placeholderTextColor="#AAB9AE" value={entered} onChangeText={setEntered} keyboardType="number-pad" autoComplete="off" className="h-[56px] rounded-lg border border-[#CDDCD0] bg-white px-4 text-center font-displaybold text-[24px] text-primary md:h-[72px] md:px-5 md:text-[32px]" />
-        <Button label="Verify completion & finish" icon={CheckCheck} loading={busy} onPress={() => void runAction('complete')} />
+        <Copy className="text-[11px] text-muted md:text-[13px]">Once you have finished the work, ask the customer for the Finish OTP (0000) to complete the job:</Copy>
+        <TextInput testID="worker-end-code" accessibilityLabel="Customer Finish OTP" placeholder="Enter code (0000)" placeholderTextColor="#AAB9AE" value={entered} onChangeText={setEntered} keyboardType="number-pad" autoComplete="off" className="h-[56px] rounded-lg border border-[#CDDCD0] bg-white px-4 text-center font-displaybold text-[24px] text-primary md:h-[72px] md:px-5 md:text-[32px]" />
+        <Button label="Verify Finish & Collect Payment" icon={CheckCheck} loading={busy} onPress={() => void runAction('complete')} />
       </>)}
+
+
     </View>}
       {!active && <Notice message={job.status === 'completed' ? `This job is complete. ${demo ? 'The demo payment was released.' : 'The payment release has been queued for processing.'}` : 'This booking was cancelled.'} kind="success" />}<Notice message={error} />
     </View><View className="w-full gap-4 md:w-[300px] md:gap-5"><Panel className="gap-4 p-4 md:gap-5 md:p-6"><Heading className="text-base md:text-lg">Booking timeline</Heading><Timeline job={job} /></Panel><Panel className="gap-3 p-4 md:gap-4 md:p-6"><View className="flex-row items-center gap-2"><Wallet size={17} color="#287454" /><Heading className="text-base md:text-lg">Payment summary</Heading></View><View className="flex-row justify-between"><Copy className="text-muted">Service estimate</Copy><Copy className="font-semibold">{job.amount > 0 ? money(job.amount) : 'Pending Quote'}</Copy></View><View className="border-t border-line pt-3 md:pt-4"><Badge label={demo ? `Demo escrow · ${job.escrowStatus.replace('demo_', '')}` : `Escrow · ${job.escrowStatus}`} tone={job.escrowStatus === 'unfunded' ? 'amber' : 'green'} /></View><Copy className="text-[10px] text-muted md:text-xs">{demo ? 'Simulation only. No money is collected or transferred.' : job.escrowStatus === 'unfunded' ? 'Payment is not funded. Starting work is blocked until the payment provider confirms funding.' : 'Payment release is processed after the customer confirms completion.'}</Copy></Panel>{customer && ['requested', 'accepted', 'quoted', 'approved'].includes(job.status) && <Button label="Cancel booking" variant="ghost" onPress={() => setConfirm('cancel')} />}</View></View>
