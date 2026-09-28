@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, BadgeCheck, Bookmark, CalendarDays, Check, ChevronRight, Clock3, Droplets, Hammer, House, MapPin, Paintbrush, Search, ShieldCheck, SlidersHorizontal, Sparkles, Star, Wallet, Wind, Zap, type LucideIcon } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, BadgeCheck, Bookmark, CalendarDays, Check, ChevronRight, Clock3, Droplets, Hammer, House, MapPin, Mic, Paintbrush, Search, ShieldCheck, SlidersHorizontal, Sparkles, Star, Wallet, Wind, Zap, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, RefreshControl, ScrollView, Switch, TextInput, View, useWindowDimensions } from 'react-native';
 import { Shell, type Tab } from '../components/Shell';
@@ -184,7 +184,16 @@ function HireWorkerSheet({ service, onClose, onBooked }: { service: typeof probl
   const [address, setAddress] = useState('24, 12th Main Road, Indiranagar, Bengaluru');
   const [day, setDay] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const simulateVoice = () => {
+    setListening(true);
+    setTimeout(() => {
+      setDescription(prev => prev + (prev ? ' ' : '') + "I need someone to come quickly, it's quite urgent and I don't have the right tools to fix it.");
+      setListening(false);
+    }, 1500);
+  };
 
   const submit = async () => {
     if (!profile) return;
@@ -231,7 +240,13 @@ function HireWorkerSheet({ service, onClose, onBooked }: { service: typeof probl
     </View>
 
     <Field label="State your problem" placeholder="e.g. Kitchen sink tap is leaking constantly" value={title} onChangeText={setTitle} maxLength={100} />
-    <Field label="Additional details (optional)" placeholder="e.g. Need quick repair, tap is dripping into bucket" value={description} onChangeText={setDescription} multiline maxLength={1000} className="min-h-20" />
+    
+    <View className="gap-2">
+      <Field label="Additional details (optional)" placeholder="e.g. Need quick repair, tap is dripping into bucket" value={description} onChangeText={setDescription} multiline maxLength={1000} className="min-h-20" />
+      <View className="self-start">
+        <Button label={listening ? 'Listening...' : 'Voice Input (Demo)'} icon={Mic} variant="secondary" loading={listening} onPress={simulateVoice} />
+      </View>
+    </View>
     <Field label="Service address" placeholder="House/Flat number, Street, Neighborhood" value={address} onChangeText={setAddress} maxLength={300} />
 
     <View className="flex-row gap-3">
