@@ -9,10 +9,22 @@ import { useAuth } from '../stores/auth';
 export function AuthScreen({ signup: _signup = false, onSwitch: _onSwitch, onWelcome: _onWelcome }: { signup?: boolean; onSwitch: () => void; onWelcome: () => void }) {
   const { width } = useWindowDimensions();
   const wide = width >= 1000;
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [mobile, setMobile] = useState('9876543210');
-  const [token, setToken] = useState('123456');
-  const [showPhone, setShowPhone] = useState(false);
-  const { busy, error, loginDemo, verifyOtp } = useAuth();
+  const [token, setToken] = useState('0000');
+  const [localError, setLocalError] = useState<string | null>(null);
+  const { busy, error, loginDemo } = useAuth();
+
+  const handleLogin = () => {
+    if (token !== '0000') {
+      setLocalError('Invalid OTP. Please use 0000 for the prototype.');
+      return;
+    }
+    setLocalError(null);
+    if (selectedRole) {
+      void loginDemo(selectedRole);
+    }
+  };
 
   return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-canvas"><View className="flex-1 flex-row">
     {wide && <ImageBackground source={{ uri: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1500&auto=format&fit=crop&q=85' }} className="w-[47%] bg-primary" resizeMode="cover"><View className="flex-1 justify-between bg-black/35 p-12"><Logo light /><View className="gap-6"><View className="self-start rounded border border-white/40 bg-white/10 px-3 py-1"><Copy className="font-medium text-xs text-white">INTERACTIVE PROTOTYPE</Copy></View><Heading className="max-w-lg text-[48px] leading-[58px] text-white">Good help.{ '\n' }Close to home.</Heading><Copy className="max-w-sm text-[17px] leading-7 text-white/90">A cross-platform hyperlocal gig services app. Instant problem matching, dual identity verification, and OTP-driven escrow payments.</Copy><View className="mt-3 flex-row items-center gap-3"><View className="flex-row"><Avatar name="Customer" /><Avatar name="Worker" /></View><View><Copy className="font-semibold text-white">5 km Geofence Matching</Copy><Copy className="text-xs text-white/80">Select a role below to start.</Copy></View></View></View><View className="flex-row items-center gap-2"><ShieldCheck size={17} color="white" /><Copy className="text-xs text-white/90">SIH 2026 Prototype</Copy></View></View></ImageBackground>}
@@ -20,52 +32,49 @@ export function AuthScreen({ signup: _signup = false, onSwitch: _onSwitch, onWel
       <View className="mb-2"><Logo /></View>
       <View className="gap-2">
         <View className="flex-row items-center gap-2"><Sparkles size={16} color="#287454" /><Copy className="font-semibold text-xs text-primary">LOCALFIX DEMO MODE</Copy></View>
-        <Heading className="text-[24px] leading-[30px] md:text-[32px] md:leading-[40px]">Select your role to begin</Heading>
-        <Copy className="text-muted">Explore the end-to-end prototype from either perspective:</Copy>
+        <Heading className="text-[24px] leading-[30px] md:text-[32px] md:leading-[40px]">{selectedRole ? `Sign in as ${selectedRole === 'customer' ? 'Customer' : 'Worker'}` : 'Select your role to begin'}</Heading>
+        <Copy className="text-muted">{selectedRole ? 'Enter your mobile number to receive an OTP.' : 'Explore the end-to-end prototype from either perspective:'}</Copy>
       </View>
 
-      <View className="gap-4">
-        <Pressable accessibilityRole="button" onPress={() => void loginDemo('customer')} className="rounded-xl border-2 border-[#287454] bg-mint p-4 transition-all md:p-5">
-            <View className="flex-row items-center gap-2.5 md:gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-lg bg-primary md:h-12 md:w-12">
-                <House size={20} color="white" />
-            </View>
-              <View className="flex-1">
-                <Heading className="text-base md:text-lg">Demo Customer</Heading>
-                <Copy className="text-[10px] text-muted md:text-xs">Click a problem & hire a local verified worker</Copy>
+      {!selectedRole ? (
+        <View className="gap-4">
+          <Pressable accessibilityRole="button" onPress={() => setSelectedRole('customer')} className="rounded-xl border border-line bg-white p-4 hover:border-primary transition-all md:p-5">
+              <View className="flex-row items-center gap-2.5 md:gap-3">
+                <View className="h-10 w-10 items-center justify-center rounded-lg bg-primary md:h-12 md:w-12">
+                  <House size={20} color="white" />
               </View>
-              <ArrowRight size={18} color="#287454" />
-            </View>
-        </Pressable>
-
-        <Pressable accessibilityRole="button" onPress={() => void loginDemo('worker')} className="rounded-xl border border-line bg-white p-4 hover:border-primary transition-all md:p-5">
-            <View className="flex-row items-center gap-2.5 md:gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-lg bg-[#EAEFEA] md:h-12 md:w-12">
-                <BriefcaseBusiness size={20} color="#287454" />
-            </View>
-              <View className="flex-1">
-                <Heading className="text-base md:text-lg">Demo Worker</Heading>
-                <Copy className="text-[10px] text-muted md:text-xs">Accept assigned jobs & unlock with start code</Copy>
+                <View className="flex-1">
+                  <Heading className="text-base md:text-lg">Demo Customer</Heading>
+                  <Copy className="text-[10px] text-muted md:text-xs">Click a problem & hire a local verified worker</Copy>
+                </View>
+                <ArrowRight size={18} color="#287454" />
               </View>
-              <ArrowRight size={18} color="#7A8981" />
-            </View>
-        </Pressable>
-      </View>
+          </Pressable>
 
-      <Notice message={error} />
+          <Pressable accessibilityRole="button" onPress={() => setSelectedRole('worker')} className="rounded-xl border border-line bg-white p-4 hover:border-primary transition-all md:p-5">
+              <View className="flex-row items-center gap-2.5 md:gap-3">
+                <View className="h-10 w-10 items-center justify-center rounded-lg bg-[#EAEFEA] md:h-12 md:w-12">
+                  <BriefcaseBusiness size={20} color="#287454" />
+              </View>
+                <View className="flex-1">
+                  <Heading className="text-base md:text-lg">Demo Worker</Heading>
+                  <Copy className="text-[10px] text-muted md:text-xs">Accept assigned jobs & unlock with start code</Copy>
+                </View>
+                <ArrowRight size={18} color="#7A8981" />
+              </View>
+          </Pressable>
+        </View>
+      ) : (
+        <View className="gap-4">
+          <Field label="Mobile number" placeholder="Enter mobile number" value={mobile} onChangeText={setMobile} keyboardType="phone-pad" />
+          <Field label="OTP Code" placeholder="Enter OTP (0000)" value={token} onChangeText={setToken} keyboardType="number-pad" />
+          <Notice kind="info" message="For this prototype, please use OTP: 0000" />
+          <Button label="Login securely" loading={busy} onPress={handleLogin} />
+          <Button label="Back to role selection" variant="ghost" onPress={() => setSelectedRole(null)} />
+        </View>
+      )}
 
-      <View className="border-t border-line pt-4">
-        <Pressable accessibilityRole="button" onPress={() => setShowPhone(!showPhone)} className="py-2">
-          <Copy className="text-center text-xs text-muted underline">{showPhone ? 'Hide custom phone login' : 'Or simulate custom phone/OTP sign-in'}</Copy>
-        </Pressable>
-        {showPhone && (
-          <View className="mt-3 gap-3 rounded-lg border border-line bg-white p-4">
-            <Field label="Mobile number" placeholder="Any mobile number" value={mobile} onChangeText={setMobile} />
-            <Field label="OTP Code" placeholder="Any code (e.g. 1234)" value={token} onChangeText={setToken} />
-            <Button label="Login with custom details" loading={busy} onPress={() => void verifyOtp(token)} />
-          </View>
-        )}
-      </View>
+      <Notice message={error || localError} />
 
       <TrustLine />
     </View></ScrollView>
