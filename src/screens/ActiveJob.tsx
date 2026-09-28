@@ -66,20 +66,12 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
         <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Worker Arrival" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_start')} /></View>
       </> : <>
         <View className="flex-row items-center gap-2"><MapPin size={18} color="#287454" /><Heading className="text-base md:text-lg">You are on the way</Heading></View>
-        <Copy className="text-[12px] text-muted md:text-[13px]">To mark arrival, enter the customer's OTP, confirm your identity details, and take a quick selfie.</Copy>
+        <Copy className="text-[12px] text-muted md:text-[13px]">To mark arrival, enter the customer's OTP and take a quick selfie to verify.</Copy>
         
         <View className="gap-3">
           <View className="gap-1.5">
             <Copy className="font-semibold text-xs text-muted">Customer Arrival OTP</Copy>
             <TextInput testID="worker-start-code" placeholder="0000" placeholderTextColor="#AAB9AE" value={entered} onChangeText={setEntered} keyboardType="number-pad" autoComplete="off" className="h-[48px] rounded-lg border border-[#CDDCD0] bg-white px-3 font-displaybold text-[18px] text-primary md:h-[52px] md:text-[20px]" />
-          </View>
-          <View className="gap-1.5">
-            <Copy className="font-semibold text-xs text-muted">Aadhaar Number</Copy>
-            <TextInput value="0000 0000 0000" editable={false} className="h-[48px] rounded-lg border border-[#CDDCD0] bg-gray-50 px-3 font-sans text-[15px] text-muted opacity-80 md:h-[52px]" />
-          </View>
-          <View className="gap-1.5">
-            <Copy className="font-semibold text-xs text-muted">e-Shram UAN</Copy>
-            <TextInput value="0000 0000 0000" editable={false} className="h-[48px] rounded-lg border border-[#CDDCD0] bg-gray-50 px-3 font-sans text-[15px] text-muted opacity-80 md:h-[52px]" />
           </View>
         </View>
 
