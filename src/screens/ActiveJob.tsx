@@ -66,7 +66,7 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
         <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Worker Arrival" variant="secondary" loading={busy} onPress={() => void runAction('simulate_worker_start')} /></View>
       </> : <>
         <View className="flex-row items-center gap-2"><MapPin size={18} color="#287454" /><Heading className="text-base md:text-lg">You are on the way</Heading></View>
-        <Copy className="text-[12px] text-muted md:text-[13px]">To mark arrival, enter the customer's OTP and take a quick selfie to verify.</Copy>
+        <Copy className="text-[12px] text-muted md:text-[13px]">To mark arrival, enter the customer's OTP to verify.</Copy>
         
         <View className="gap-3">
           <View className="gap-1.5">
@@ -75,7 +75,7 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
           </View>
         </View>
 
-        <Button label="Take Selfie & Verify Arrival" icon={Camera} loading={busy} onPress={() => void runAction('start')} />
+        <Button label="Verify Arrival" loading={busy} onPress={() => void runAction('start')} />
       </>)}
 
       {job.status === 'arrived' && (customer ? <>
