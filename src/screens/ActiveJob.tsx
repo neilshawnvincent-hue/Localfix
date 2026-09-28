@@ -37,8 +37,9 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
   const playAudio = () => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      const text = `Job: ${job.title}. Location: ${job.address}. Description: ${job.description || 'No additional details'}.`;
+      const text = `Aapka kaam hai: ${job.title}. Customer ka address hai: ${job.address}. Kaam ki details: ${job.description || 'Koi additional details nahi'}.`;
       const utterance = new window.SpeechSynthesisUtterance(text);
+      utterance.lang = 'hi-IN';
       window.speechSynthesis.speak(utterance);
     } else {
       setError('Text-to-speech is not supported on this device.');
