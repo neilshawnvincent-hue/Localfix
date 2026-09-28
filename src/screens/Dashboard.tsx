@@ -240,9 +240,18 @@ function HireWorkerSheet({ service, onClose, onBooked }: { service: typeof probl
       ))}
     </View>
 
-    <Notice kind="info" message="Automatic worker assignment: Once you click Request Worker Now, a verified 5 km local technician will review your problem and provide a quote." />
+    <Notice kind="info" message="Automatic worker assignment: Once you request a worker, a verified 5 km local technician will accept your request, travel to your location, and provide a quote." />
+    
+    <View className="rounded-lg border border-[#CDDCD0] bg-white p-4">
+      <View className="flex-row items-center justify-between">
+        <Copy className="font-semibold">Convenience Fee</Copy>
+        <Copy className="font-bold text-primary">₹50</Copy>
+      </View>
+      <Copy className="mt-1 text-[11px] text-muted">A non-refundable fee of ₹50 is required to dispatch a worker to your location.</Copy>
+    </View>
+
     <Notice message={error} />
 
-    <Button label="Request Worker Now" icon={ArrowRight} loading={busy} onPress={() => void submit()} />
+    <Button label="Pay ₹50 & Request Worker" icon={ArrowRight} loading={busy} onPress={() => void submit()} />
   </Sheet>;
 }

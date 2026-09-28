@@ -1,6 +1,6 @@
 export type Role = 'customer' | 'worker';
 export type VerificationStatus = 'unverified' | 'pending' | 'verified';
-export type JobStatus = 'requested' | 'quoted' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+export type JobStatus = 'requested' | 'accepted' | 'quoted' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
 export type Category = 'All services' | 'Plumbing' | 'Electrical' | 'Cleaning' | 'Carpentry' | 'Painting' | 'Appliances';
 
 export interface Coordinates { latitude: number; longitude: number }
@@ -43,7 +43,7 @@ export interface Job {
 
 export const DEFAULT_LOCATION: Coordinates = { latitude: 12.9784, longitude: 77.6408 };
 export const statusLabels: Record<JobStatus, string> = {
-  requested: 'Booking requested', quoted: 'Worker quoted', accepted: 'On the way', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled',
+  requested: 'Booking requested', accepted: 'On the way', quoted: 'Worker quoted', approved: 'Quote approved', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled',
 };
 export function distanceKm(origin: Coordinates, target: Coordinates): number {
   const radians = (degrees: number) => degrees * Math.PI / 180;

@@ -95,7 +95,7 @@ export const useBookings = create<BookingState>()(persist((set, get) => ({
       nextStatus = 'quoted';
       newAmount = amount;
     } else if (action === 'customer_accept') {
-      nextStatus = 'accepted';
+      nextStatus = 'approved';
     } else {
       throw new Error('Unsupported action.');
     }
