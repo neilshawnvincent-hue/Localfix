@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCheck, LockKeyhole, MapPin, ShieldCheck, Wallet, Volume2, Camera } from 'lucide-react-native';
+import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCheck, LockKeyhole, MapPin, ShieldCheck, Wallet, Volume2, Camera, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Linking, ScrollView, Text, TextInput, View } from 'react-native';
 import { Avatar, Badge, Button, Copy, EmptyState, Heading, Logo, Notice, Panel, Sheet, SOSButton, Timeline } from '../components/ui';
@@ -101,6 +101,7 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
       </> : <>
         <View className="flex-row items-center gap-2"><Wallet size={18} color="#287454" /><Heading className="text-base md:text-lg">Quote sent</Heading></View>
         <Copy className="text-[12px] text-muted md:text-[13px]">Waiting for customer to accept your quote of {money(job.amount)} so work can begin.</Copy>
+        <View className="border-t border-[#CDDCD0] pt-4"><Button label="Simulate Customer Approval" variant="secondary" loading={busy} onPress={() => void runAction('customer_accept')} /></View>
       </>)}
 
       {job.status === 'in_progress' && (customer ? <>
@@ -117,7 +118,17 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
 
 
     </View>}
-      {!active && <Notice message={job.status === 'completed' ? `This job is complete. ${demo ? 'The demo payment was released.' : 'The payment release has been queued for processing.'}` : 'This booking was cancelled.'} kind="success" />}<Notice message={error} />
+      {!active && <View className={`rounded-lg p-5 ${job.status === 'completed' ? 'border border-[#CDDCD0] bg-mint' : 'border border-line bg-canvas'}`}>
+        <View className="flex-row items-center gap-2 mb-2">
+          {job.status === 'completed' ? <CheckCheck color="#287454" size={20} /> : <X color="#7A8981" size={20} />}
+          <Heading className="text-lg">{job.status === 'completed' ? 'Job Completed Successfully!' : 'Booking Cancelled'}</Heading>
+        </View>
+        <Copy className={job.status === 'completed' ? 'text-primary' : 'text-muted'}>
+          {job.status === 'completed' 
+            ? `You have been paid ${money(job.amount)} for this job. ${demo ? 'The demo payment was released from escrow directly to your registered bank account.' : 'The payment release has been queued for processing.'}` 
+            : 'This booking was cancelled.'}
+        </Copy>
+      </View>}<Notice message={error} />
     </View><View className="w-full gap-4 md:w-[300px] md:gap-5"><Panel className="gap-4 p-4 md:gap-5 md:p-6"><Heading className="text-base md:text-lg">Booking timeline</Heading><Timeline job={job} /></Panel><Panel className="gap-3 p-4 md:gap-4 md:p-6"><View className="flex-row items-center gap-2"><Wallet size={17} color="#287454" /><Heading className="text-base md:text-lg">Payment summary</Heading></View><View className="flex-row justify-between"><Copy className="text-muted">Service estimate</Copy><Copy className="font-semibold">{job.amount > 0 ? money(job.amount) : 'Pending Quote'}</Copy></View><View className="border-t border-line pt-3 md:pt-4"><Badge label={demo ? `Demo escrow · ${job.escrowStatus.replace('demo_', '')}` : `Escrow · ${job.escrowStatus}`} tone={job.escrowStatus === 'unfunded' ? 'amber' : 'green'} /></View><Copy className="text-[10px] text-muted md:text-xs">{demo ? 'Simulation only. No money is collected or transferred.' : job.escrowStatus === 'unfunded' ? 'Payment is not funded. Starting work is blocked until the payment provider confirms funding.' : 'Payment release is processed after the customer confirms completion.'}</Copy></Panel>{customer && ['requested', 'accepted', 'quoted', 'approved'].includes(job.status) && <Button label="Cancel booking" variant="ghost" onPress={() => setConfirm('cancel')} />}</View></View>
   </View></ScrollView>
     {active && <View className="border-t border-line bg-white px-5 py-3"><View className="mx-auto w-full max-w-[1000px] flex-row items-center justify-between gap-3"><View className="hidden flex-1 md:flex"><Copy className="text-xs text-muted">Your safety always comes first.</Copy></View><View className="flex-1 md:max-w-[260px]"><SOSButton jobId={job.id} demo={demo} onRecord={recordSOS} /></View></View></View>}
