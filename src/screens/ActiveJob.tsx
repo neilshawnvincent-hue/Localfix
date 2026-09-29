@@ -1,6 +1,6 @@
-import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCheck, LockKeyhole, MapPin, ShieldCheck, Wallet, Volume2, Camera, X } from 'lucide-react-native';
+import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCheck, LockKeyhole, MapPin, ShieldCheck, Wallet, Volume2, Camera, X, Star } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Linking, ScrollView, Text, TextInput, View } from 'react-native';
+import { Linking, ScrollView, Text, TextInput, View, Pressable } from 'react-native';
 import { Avatar, Badge, Button, Copy, EmptyState, Heading, Logo, Notice, Panel, Sheet, SOSButton, Timeline } from '../components/ui';
 import { professionals } from '../data/demo';
 import { canViewJob, money, statusLabels } from '../domain/marketplace';
@@ -19,6 +19,8 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<'complete' | 'cancel' | null>(null);
+  const [rating, setRating] = useState(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const customer = profile?.role === 'customer';
   useEffect(() => {
     let alive = true;
@@ -125,9 +127,25 @@ export function ActiveJob({ jobId, onBack }: { jobId: string; onBack: () => void
         </View>
         <Copy className={job.status === 'completed' ? 'text-primary' : 'text-muted'}>
           {job.status === 'completed' 
-            ? `You have been paid ${money(job.amount)} for this job. ${demo ? 'The demo payment was released from escrow directly to your registered bank account.' : 'The payment release has been queued for processing.'}` 
+            ? (customer 
+                ? `Payment of ${money(job.amount)} has been released to ${job.workerName}. ${demo ? 'This was a demo simulation.' : 'Thank you for using LocalFix!'}` 
+                : `You have been paid ${money(job.amount)} for this job. ${demo ? 'The demo payment was released from escrow directly to your registered bank account.' : 'The payment release has been queued for processing.'}`
+              )
             : 'This booking was cancelled.'}
         </Copy>
+        {job.status === 'completed' && customer && (
+          <View className="mt-4 border-t border-[#CDDCD0] pt-4">
+            <Copy className="font-semibold text-sm mb-3 text-primary">{ratingSubmitted ? 'Thank you for your rating!' : `Rate your experience with ${job.workerName}`}</Copy>
+            <View className="flex-row gap-2 mb-4">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable key={star} onPress={() => !ratingSubmitted && setRating(star)} disabled={ratingSubmitted}>
+                  <Star size={32} color={rating >= star ? '#F59E0B' : '#CDDCD0'} fill={rating >= star ? '#F59E0B' : 'transparent'} />
+                </Pressable>
+              ))}
+            </View>
+            <Button label={ratingSubmitted ? 'Rating Submitted' : (rating > 0 ? 'Submit Rating' : 'Select a rating')} disabled={rating === 0 || ratingSubmitted} onPress={() => setRatingSubmitted(true)} variant={ratingSubmitted ? 'secondary' : 'primary'} />
+          </View>
+        )}
       </View>}<Notice message={error} />
     </View><View className="w-full gap-4 md:w-[300px] md:gap-5"><Panel className="gap-4 p-4 md:gap-5 md:p-6"><Heading className="text-base md:text-lg">Booking timeline</Heading><Timeline job={job} /></Panel><Panel className="gap-3 p-4 md:gap-4 md:p-6"><View className="flex-row items-center gap-2"><Wallet size={17} color="#287454" /><Heading className="text-base md:text-lg">Payment summary</Heading></View><View className="flex-row justify-between"><Copy className="text-muted">Service estimate</Copy><Copy className="font-semibold">{job.amount > 0 ? money(job.amount) : 'Pending Quote'}</Copy></View><View className="border-t border-line pt-3 md:pt-4"><Badge label={demo ? `Demo escrow · ${job.escrowStatus.replace('demo_', '')}` : `Escrow · ${job.escrowStatus}`} tone={job.escrowStatus === 'unfunded' ? 'amber' : 'green'} /></View><Copy className="text-[10px] text-muted md:text-xs">{demo ? 'Simulation only. No money is collected or transferred.' : job.escrowStatus === 'unfunded' ? 'Payment is not funded. Starting work is blocked until the payment provider confirms funding.' : 'Payment release is processed after the customer confirms completion.'}</Copy></Panel>{customer && ['requested', 'accepted', 'quoted', 'approved'].includes(job.status) && <Button label="Cancel booking" variant="ghost" onPress={() => setConfirm('cancel')} />}</View></View>
   </View></ScrollView>
