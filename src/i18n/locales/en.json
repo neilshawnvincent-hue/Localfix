@@ -1,0 +1,36 @@
+{
+  "registration": {
+    "title": "Worker Registration",
+    "subtitle": "Complete your profile to start accepting jobs in your neighborhood.",
+    "selectLanguage": "Select Language",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your full name",
+    "profession": "Profession",
+    "professionPlaceholder": "Select your profession",
+    "professions": {
+      "plumber": "Plumber",
+      "electrician": "Electrician",
+      "carpenter": "Carpenter",
+      "painter": "Painter",
+      "cleaner": "Cleaner",
+      "appliance_repair": "Appliance Repair"
+    },
+    "uanNumber": "UAN Number (e-Shram)",
+    "uanPlaceholder": "Enter 12-digit UAN number",
+    "aadhaarNumber": "Aadhaar Number",
+    "aadhaarPlaceholder": "Enter 12-digit Aadhaar number",
+    "register": "Register",
+    "registering": "Registering...",
+    "errors": {
+      "fullNameRequired": "Full name is required.",
+      "fullNameMinLength": "Full name must be at least 2 characters.",
+      "professionRequired": "Please select a profession.",
+      "uanRequired": "UAN number is required.",
+      "uanInvalid": "UAN must be exactly 12 digits.",
+      "aadhaarRequired": "Aadhaar number is required.",
+      "aadhaarInvalid": "Aadhaar must be exactly 12 digits.",
+      "registrationFailed": "Registration failed. Please try again.",
+      "registrationSuccess": "Registration successful!"
+    }
+  }
+}

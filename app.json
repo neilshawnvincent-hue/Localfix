@@ -7,9 +7,28 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "ios": { "supportsTablet": true, "bundleIdentifier": "app.localfix.mobile" },
-    "android": { "package": "app.localfix.mobile", "edgeToEdgeEnabled": true },
-    "web": { "bundler": "metro", "name": "LocalFix | Good help, close to home" },
-    "plugins": ["expo-secure-store", "expo-font", ["expo-location", { "locationWhenInUsePermission": "LocalFix uses your location to find verified professionals within 5 km." }]]
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.localfix.mobile"
+    },
+    "android": {
+      "package": "app.localfix.mobile",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "name": "LocalFix | Good help, close to home"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "LocalFix uses your location to find verified professionals within 5 km."
+        }
+      ],
+      "expo-localization"
+    ]
   }
 }

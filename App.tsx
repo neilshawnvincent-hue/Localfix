@@ -6,23 +6,27 @@ import { StatusBar } from 'expo-status-bar';
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react';
 import { ActivityIndicator, AppState, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { I18nextProvider } from 'react-i18next';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Copy, Heading, Logo, Notice } from './src/components/ui';
+import i18n, { initI18n } from './src/i18n/i18n';
 import { errorMessage, supabase } from './src/lib/supabase';
 import { ActiveJob } from './src/screens/ActiveJob';
+import { AdminDashboard } from './src/screens/AdminDashboard';
 import { AuthScreen, VerificationScreen, WelcomeScreen } from './src/screens/AuthScreens';
 import { Dashboard } from './src/screens/Dashboard';
+import { WorkerRegistration } from './src/screens/WorkerRegistration';
 import { useAuth } from './src/stores/auth';
 import { useBookings } from './src/stores/bookings';
 
 type WorkspaceRoutes = { Home: undefined; ActiveJob: { jobId: string } };
-type RootRoutes = { Login: undefined; Signup: undefined; Welcome: undefined; Verify: undefined; Customer: NavigatorScreenParams<WorkspaceRoutes>; Worker: NavigatorScreenParams<WorkspaceRoutes> };
+type RootRoutes = { Login: undefined; Signup: undefined; Welcome: undefined; Verify: undefined; Registration: undefined; Admin: undefined; Customer: NavigatorScreenParams<WorkspaceRoutes>; Worker: NavigatorScreenParams<WorkspaceRoutes> };
 const Root = createNativeStackNavigator<RootRoutes>();
 const Customer = createNativeStackNavigator<WorkspaceRoutes>();
 const Worker = createNativeStackNavigator<WorkspaceRoutes>();
 const linking: LinkingOptions<RootRoutes> = {
   prefixes: ['localfix://', ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : [])],
-  config: { screens: { Login: '', Signup: 'signup', Welcome: 'welcome', Verify: 'verify', Customer: { path: 'customer', screens: { Home: '', ActiveJob: 'bookings/:jobId' } }, Worker: { path: 'worker', screens: { Home: '', ActiveJob: 'jobs/:jobId' } } } },
+  config: { screens: { Login: '', Signup: 'signup', Welcome: 'welcome', Verify: 'verify', Admin: 'admin', Customer: { path: 'customer', screens: { Home: '', ActiveJob: 'bookings/:jobId' } }, Worker: { path: 'worker', screens: { Home: '', ActiveJob: 'jobs/:jobId' } } } },
 };
 function CustomerFlow() {
   return <Customer.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}><Customer.Screen name="Home">{({ navigation }) => <Dashboard onJob={jobId => navigation.navigate('ActiveJob', { jobId })} />}</Customer.Screen><Customer.Screen name="ActiveJob">{({ route, navigation }) => <ActiveJob jobId={route.params.jobId} onBack={() => navigation.navigate('Home')} />}</Customer.Screen></Customer.Navigator>;
@@ -35,6 +39,7 @@ function Application() {
   const { initialize, profile, mode, ready } = useAuth();
   const [syncError, setSyncError] = useState<string | null>(null);
   useEffect(() => initialize(), [initialize]);
+  useEffect(() => { void initI18n(); }, []);
   useEffect(() => {
     const listener = AppState.addEventListener('change', next => { if (next === 'active') supabase?.auth.startAutoRefresh(); else supabase?.auth.stopAutoRefresh(); });
     return () => listener.remove();
@@ -58,7 +63,7 @@ function Application() {
     return () => { active = false; foreground.remove(); void supabase?.removeChannel(channel); useBookings.getState().clearLive(); };
   }, [mode, profile]);
   if ((!fontsLoaded && !fontError) || !ready) return <View className="flex-1 items-center justify-center gap-5 bg-canvas"><Logo /><ActivityIndicator color="#287454" /><Copy className="text-xs text-muted">Getting your neighborhood ready...</Copy></View>;
-  return <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}><StatusBar style="dark" />{syncError && <Notice message={syncError} />}<NavigationContainer key={`${mode ?? 'public'}:${profile?.id ?? 'guest'}:${profile?.verification ?? ''}`} linking={linking}><Root.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>{!profile ? <><Root.Screen name="Login">{({ navigation }) => <AuthScreen onSwitch={() => navigation.navigate('Signup')} onWelcome={() => navigation.navigate('Welcome')} />}</Root.Screen><Root.Screen name="Signup">{({ navigation }) => <AuthScreen signup onSwitch={() => navigation.navigate('Login')} onWelcome={() => navigation.navigate('Welcome')} />}</Root.Screen><Root.Screen name="Welcome">{({ navigation }) => <WelcomeScreen onContinue={() => navigation.navigate('Login')} />}</Root.Screen></> : profile.role === 'worker' && profile.verification !== 'verified' ? <Root.Screen name="Verify" component={VerificationScreen} /> : profile.role === 'customer' ? <Root.Screen name="Customer" component={CustomerFlow} /> : <Root.Screen name="Worker" component={WorkerFlow} />}</Root.Navigator></NavigationContainer></SafeAreaView>;
+  return <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}><StatusBar style="dark" />{syncError && <Notice message={syncError} />}<NavigationContainer key={`${mode ?? 'public'}:${profile?.id ?? 'guest'}:${profile?.verification ?? ''}`} linking={linking}><Root.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>{!profile ? <><Root.Screen name="Login">{({ navigation }) => <AuthScreen onSwitch={() => navigation.navigate('Signup')} onWelcome={() => navigation.navigate('Welcome')} />}</Root.Screen><Root.Screen name="Signup">{({ navigation }) => <AuthScreen signup onSwitch={() => navigation.navigate('Login')} onWelcome={() => navigation.navigate('Welcome')} />}</Root.Screen><Root.Screen name="Welcome">{({ navigation }) => <WelcomeScreen onContinue={() => navigation.navigate('Login')} />}</Root.Screen><Root.Screen name="Admin">{({ navigation }) => <AdminDashboard onBack={() => navigation.navigate('Login')} />}</Root.Screen></> : profile.role === 'worker' && profile.verification !== 'verified' ? <Root.Screen name="Verify" component={VerificationScreen} /> : profile.role === 'customer' ? <Root.Screen name="Customer" component={CustomerFlow} /> : <Root.Screen name="Worker" component={WorkerFlow} />}</Root.Navigator></NavigationContainer></SafeAreaView>;
 }
 class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -66,4 +71,4 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean
   componentDidCatch(_error: Error, _info: ErrorInfo) {}
   render() { return this.state.failed ? <View className="flex-1 items-center justify-center gap-4 bg-canvas p-8"><Heading>Let&apos;s try that again.</Heading><Copy className="text-center text-muted">LocalFix could not display this screen. Your bookings have not been changed.</Copy><Button label="Return to sign in" onPress={() => { void useAuth.getState().logout(); this.setState({ failed: false }); }} /></View> : this.props.children; }
 }
-export default function App() { return <GestureHandlerRootView className="flex-1"><SafeAreaProvider><ErrorBoundary><Application /></ErrorBoundary></SafeAreaProvider></GestureHandlerRootView>; }
+export default function App() { return <I18nextProvider i18n={i18n}><GestureHandlerRootView className="flex-1"><SafeAreaProvider><ErrorBoundary><Application /></ErrorBoundary></SafeAreaProvider></GestureHandlerRootView></I18nextProvider>; }
